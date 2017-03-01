@@ -64,6 +64,7 @@ object MySATSolver {
     // might be useful for initial debugging:
     println("Declarations: \n" + declarations)
     println("Input Formula: " + formula)
+    println("CNF Formula : " + CNFConversion.toCNF(formula))
   }
 
 
