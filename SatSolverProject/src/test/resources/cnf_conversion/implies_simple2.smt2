@@ -3,12 +3,10 @@
 
 ( declare-fun p1 () Bool )
 ( declare-fun p2 () Bool )
-( declare-fun p3 () Bool )
 
-( assert ( and
- ( => p1 p3 )
- ( or p2 p3 ( not p1 )  )
-))
+( assert
+ ( = (not p1) p2 )
+)
 
 ( check-sat )
 ( get-model )
