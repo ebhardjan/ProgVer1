@@ -29,6 +29,11 @@ case class InternalClause(disjuncts : Set[InternalDisjunct]) {
 
   // returns the set of variable names occurring positively/negatively (according to b)
   def vars(b: Boolean) : Set[String] = disjuncts.foldLeft[Set[String]](Set())((set,d) => set union d.vars(b))
+
+  // returns whether or not there is an active disjunct
+  def containsActiveDisjunct() : Boolean = {
+    !disjuncts.forall(d => !d.isActive)
+  }
 }
 
 case class InternalCNF(conjuncts : Set[InternalClause]) {
@@ -36,6 +41,11 @@ case class InternalCNF(conjuncts : Set[InternalClause]) {
 
   // returns the set of variable names occurring positively/negatively (according to b)
   def vars(b: Boolean) : Set[String] = conjuncts.foldLeft[Set[String]](Set())((set,c) => set union c.vars(b))
+
+  // returns True if there is a clause with no active disjunct (meaning a clause is unsatisfiable)
+  def containsEmptyClause() : Boolean = {
+    conjuncts.foldLeft[Boolean](false)((l, clause) => l || !clause.containsActiveDisjunct())
+  }
 }
 
 // convert a given SMT-LIB formula (in CNF form) to its corresponding internal representation
