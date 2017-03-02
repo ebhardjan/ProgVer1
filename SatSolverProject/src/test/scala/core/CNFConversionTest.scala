@@ -57,10 +57,71 @@ class CNFConversionTest extends FunSuite {
     assertEqualsIgnoringWhitespaces(cnf.toString, "(and (and (not p1) (not p2)) (not p3))")
   }
 
+  test("push_down_negations_exception") {
+    intercept[IllegalStateException] {
+      formulaAfterNegationPushDown("implies_simple1")
+    }
+  }
+
   test("distribute_conjuncts_over_disjuncts_simple1") {
     val cnf = formulaAfterDistributeConjunctsOverDisjuncts("distribute_conjuncts_over_disjuncts_simple1")
     assertEqualsIgnoringWhitespaces(cnf.toString,
       "(and (or a b c e) (or a b d e) (or a b c f) (or a b d f))")
+  }
+
+  test("distribute_conjuncts_over_disjuncts_simple2") {
+    val cnf = formulaAfterDistributeConjunctsOverDisjuncts("distribute_conjuncts_over_disjuncts_simple2")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "(and (or a b c e) (or a b d e) (or a b c f) (or a b d f))")
+  }
+
+  test("top_elimination_simple1") {
+    val cnf = formulaAfterTopAndBottomRemoval("top_elimination_simple1")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "true")
+  }
+
+  test("top_elimination_simple2") {
+    val cnf = formulaAfterTopAndBottomRemoval("top_elimination_simple2")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "true")
+  }
+
+  test("top_elimination_simple3") {
+    val cnf = formulaAfterTopAndBottomRemoval("top_elimination_simple3")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "p1")
+  }
+
+  test("bottom_elimination_simple1") {
+    val cnf = formulaAfterTopAndBottomRemoval("bottom_elimination_simple1")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "false")
+  }
+
+  test("bottom_elimination_simple2") {
+    val cnf = formulaAfterTopAndBottomRemoval("bottom_elimination_simple2")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "false")
+  }
+
+  test("bottom_elimination_simple3") {
+    val cnf = formulaAfterTopAndBottomRemoval("bottom_elimination_simple3")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "p1")
+  }
+
+
+  test("duplicate_clause_elimination_simple1") {
+    val cnf = formulaAfterDuplicateClauseAndDuplicateLiteralElimination("duplicate_clause_elimination_simple1")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "(or p1 p2)")
+  }
+
+  test("duplicate_literal_elimination_simple1") {
+    val cnf = formulaAfterDuplicateClauseAndDuplicateLiteralElimination("duplicate_literal_elimination_simple1")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "(and p1 (not p1))")
   }
 
   def assertEqualsIgnoringWhitespaces(actual: String, expected: String): Unit = {
@@ -116,6 +177,23 @@ class CNFConversionTest extends FunSuite {
   def formulaAfterDistributeConjunctsOverDisjuncts(filename: String): Term = {
     val formula = readSmt2File(filename)
     CNFConversion.distributeConjunctionsOverDisjunctions(formula)
+  }
+
+  /**
+    * returns the formula after applying the "remove top and bottom" step only
+    */
+  def formulaAfterTopAndBottomRemoval(filename: String): Term = {
+    val formula = readSmt2File(filename)
+    CNFConversion.removeTopAndBottom(formula)
+  }
+
+  /**
+    * returns the formula after duplicate clause elimination
+    * @return
+    */
+  def formulaAfterDuplicateClauseAndDuplicateLiteralElimination(filename: String): Term = {
+    val formula = readSmt2File(filename)
+    CNFConversion.removeDuplicateClausesAndDuplicateLiterals(formula)
   }
 
 }
