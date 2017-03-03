@@ -46,10 +46,8 @@ object CNFConversion {
       case Not(f) => Not(pushDownNegations(f))
       case Or(disjuncts@_*) => Or(disjuncts.map(d => pushDownNegations(d)))
       case And(conjuncts@_*) => And(conjuncts.map(c => pushDownNegations(c)))
-      case Implies(_, _) =>
+      case Implies(_, _) | Equals(_, _) =>
         throw new IllegalStateException(Utils.methodName + ": Found implication! Remove implications first!")
-      case Equals(_, _) =>
-        throw new IllegalStateException(Utils.methodName + ": Found double implication! Remove implications first!")
       case _ => formula
     }
   }
@@ -94,10 +92,8 @@ object CNFConversion {
           // otherwise we do nothing
           SmtlibUtils.newAndOrSingleLiteral(processedConjuncts)
         }
-      case Implies(_, _) =>
+      case Implies(_, _) | Equals(_, _) =>
         throw new IllegalStateException(Utils.methodName + ": Found implication! Remove implications first!")
-      case Equals(_, _) =>
-        throw new IllegalStateException(Utils.methodName + ": Found double implication! Remove implications first!")
       case _ => formula
     }
   }
@@ -127,10 +123,8 @@ object CNFConversion {
         } else {
           flatten(Or(processedDisjuncts))
         }
-      case Implies(_, _) =>
+      case Implies(_, _) | Equals(_, _) =>
         throw new IllegalStateException(Utils.methodName + ": Found implication! Remove implications first!")
-      case Equals(_, _) =>
-        throw new IllegalStateException(Utils.methodName + ": Found double implication! Remove implications first!")
       case _ => formula
     }
   }
@@ -181,10 +175,8 @@ object CNFConversion {
         SmtlibUtils.newAndOrSingleLiteral(conjuncts.distinct.map(c => removeDuplicateClausesAndDuplicateLiterals(c)))
       case Or(disjuncts@_*) =>
         SmtlibUtils.newOrOrSingleLiteral(disjuncts.distinct.map(c => removeDuplicateClausesAndDuplicateLiterals(c)))
-      case Implies(_, _) =>
+      case Implies(_, _) | Equals(_, _) =>
         throw new IllegalStateException(Utils.methodName + ": Found implication! Remove implications first!")
-      case Equals(_, _) =>
-        throw new IllegalStateException(Utils.methodName + ": Found double implication! Remove implications first!")
       case _ => formula
     }
   }
