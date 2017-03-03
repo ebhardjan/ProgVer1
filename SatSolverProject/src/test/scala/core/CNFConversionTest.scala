@@ -124,6 +124,19 @@ class CNFConversionTest extends FunSuite {
       "(and p1 (not p1))")
   }
 
+  test("and_flattening_simple1") {
+    val cnf = formulaAfterFlattening("and_flattening_simple1")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "(and p1 p2 p3 p4)")
+  }
+
+  test("or_flattening_simple1") {
+    val cnf = formulaAfterFlattening("or_flattening_simple1")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "(or p1 p2 p3 p4)")
+  }
+
+
   def assertEqualsIgnoringWhitespaces(actual: String, expected: String): Unit = {
     val actual_ = actual.replaceAll("\\s+", "")
     val expected_ = expected.replaceAll("\\s+", "")
@@ -194,6 +207,15 @@ class CNFConversionTest extends FunSuite {
   def formulaAfterDuplicateClauseAndDuplicateLiteralElimination(filename: String): Term = {
     val formula = readSmt2File(filename)
     CNFConversion.removeDuplicateClausesAndDuplicateLiterals(formula)
+  }
+
+  /**
+    * returns the formula after flattening
+    * @return
+    */
+  def formulaAfterFlattening(filename: String): Term = {
+    val formula = readSmt2File(filename)
+    CNFConversion.flatten(formula)
   }
 
 }
