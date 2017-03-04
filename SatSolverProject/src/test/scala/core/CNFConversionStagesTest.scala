@@ -11,7 +11,7 @@ import smtlib.parser.Terms.Term
   */
 class CNFConversionStagesTest extends FunSuite {
 
-  val folder = "stages"
+  val folder = "src/test/resources/cnf_conversion/stages"
 
   test("implies_simple1") {
     val cnf = formulaAfterImplicationRemoval("implies_simple1")

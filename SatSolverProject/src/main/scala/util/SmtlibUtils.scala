@@ -1,7 +1,7 @@
 package util
 
 import smtlib.parser.Terms.Term
-import smtlib.theories.Core.{And, Or}
+import smtlib.theories.Core.{And, False, Or, True}
 
 /**
   * Created by jan on 03.03.17.
@@ -36,8 +36,10 @@ object SmtlibUtils {
   def newAndOrSingleLiteral(conjuncts: Seq[Term]): Term = {
     if (conjuncts.length > 1) {
       And(conjuncts)
-    } else {
+    } else if (conjuncts.length == 1) {
       conjuncts.head
+    } else {
+      True()
     }
   }
 
@@ -47,8 +49,10 @@ object SmtlibUtils {
   def newOrOrSingleLiteral(disjuncts: Seq[Term]): Term = {
     if (disjuncts.length > 1) {
       Or(disjuncts)
-    } else {
+    } else if (disjuncts.length == 1) {
       disjuncts.head
+    } else {
+      False()
     }
   }
 

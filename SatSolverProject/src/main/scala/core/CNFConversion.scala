@@ -40,6 +40,8 @@ object CNFConversion {
     */
   def pushDownNegations(formula: Term): Term = {
     formula match {
+      case Not(True()) => False()
+      case Not(False()) => True()
       case Not(Not(f)) => pushDownNegations(f)
       case Not(And(f, g)) => Or(pushDownNegations(Not(f)), pushDownNegations(Not(g)))
       case Not(Or(f, g)) => And(pushDownNegations(Not(f)), pushDownNegations(Not(g)))
@@ -117,7 +119,7 @@ object CNFConversion {
         }).toList
         // collect disjuncts that are not conjuncts
         val pureDisjuncts = processedDisjuncts.filter(p => !disjunctConjuncts.contains(p)).toList
-        if (conjuncts.nonEmpty && pureDisjuncts.nonEmpty) {
+        if (conjuncts.nonEmpty) {
           val conjunctsCombination = Combinatorial.calcCombinations[Term](conjuncts)
           flatten(And(conjunctsCombination.map(c => Or(pureDisjuncts ++ c))))
         } else {
