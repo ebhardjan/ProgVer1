@@ -4,7 +4,7 @@ import java.io.File
 
 import org.scalatest.FunSuite
 import smtlib.parser.Terms.Term
-import smtlib.theories.Core.False
+import smtlib.theories.Core.{False, True}
 import util.PropositionalLogic
 
 /**
@@ -20,14 +20,14 @@ import util.PropositionalLogic
 class CNFConversionTest extends FunSuite {
 
   val folder = "src/test/resources/cnf_conversion/previously_failing/"
-  val numberOfRandomFormulas = 10
+  val numberOfRandomFormulas = 250
   val storeFailedFormulas = true
 
   // random formula generator
-  val numberOfVariables = 5
-  val maxChildCount = 3
-  val minDepth = 3
-  val maxDepth = 5
+  val numberOfVariables = 15
+  val maxChildCount = 5
+  val minDepth = 6
+  val maxDepth = 8
 
   private[this] def getListOfSmt2Files(directoryPath: String): List[String] = {
     val directory = new File(directoryPath)
@@ -87,6 +87,7 @@ class CNFConversionTest extends FunSuite {
     var passedCount = 0
     val generator = new RandomFormulaGenerator(numberOfVariables, maxChildCount, minDepth, maxDepth)
     for (i <- 1 to numberOfRandomFormulas) {
+      //TODO introduce timeout and treat formulas that timed out as "failed"
       val formula = generator.generateRandomFormula()
       val correct = cnfConversionCorrect(formula)
       if (!correct) {
@@ -107,11 +108,10 @@ class CNFConversionTest extends FunSuite {
 
   test("dummy_test") {
     // paste uuid of failing test here to debug manually
-    val uuid = "9634ca85-2d47-427e-83b5-a231b9148daf"
+    val uuid = "04effc19-193a-47a9-89f1-64167bd8f36f"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, uuid)
-    val cnf = CNFConversion.toCNF(formula)
-    assert(CNFConversionTestUtils.formulasEqual(formula, cnf))
+    assert(cnfConversionCorrect(formula))
   }
 
 }

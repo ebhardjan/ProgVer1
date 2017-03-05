@@ -61,6 +61,11 @@ class CNFConversionStagesTest extends FunSuite {
     assertEqualsIgnoringWhitespaces(cnf.toString, "(and (and (not p1) (not p2)) (not p3))")
   }
 
+  test("push_down_negations_simple6") {
+    val cnf = formulaAfterNegationPushDown("push_down_negations_simple6")
+    assertEqualsIgnoringWhitespaces(cnf.toString, "(and (not p3) (not p4) (not p3))")
+  }
+
   test("push_down_negations_exception") {
     intercept[IllegalStateException] {
       formulaAfterNegationPushDown("implies_simple1")
@@ -166,7 +171,7 @@ class CNFConversionStagesTest extends FunSuite {
   test("and_flattening_simple3") {
     val cnf = formulaAfterFlattening("and_flattening_simple3")
     assertEqualsIgnoringWhitespaces(cnf.toString,
-      "(and (and a b) (or c d))")
+      "(and a b (or c d))")
   }
 
   test("or_flattening_simple1") {
@@ -184,7 +189,7 @@ class CNFConversionStagesTest extends FunSuite {
   test("or_flattening_simple3") {
     val cnf = formulaAfterFlattening("or_flattening_simple3")
     assertEqualsIgnoringWhitespaces(cnf.toString,
-      "(or (or a b) (and c d))")
+      "(or a b (and c d))")
   }
 
   def assertEqualsIgnoringWhitespaces(actual: String, expected: String): Unit = {

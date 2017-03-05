@@ -43,8 +43,8 @@ object CNFConversion {
       case Not(True()) => False()
       case Not(False()) => True()
       case Not(Not(f)) => pushDownNegations(f)
-      case Not(And(f, g)) => Or(pushDownNegations(Not(f)), pushDownNegations(Not(g)))
-      case Not(Or(f, g)) => And(pushDownNegations(Not(f)), pushDownNegations(Not(g)))
+      case Not(And(conjuncts@_*)) => Or(conjuncts.map(c => pushDownNegations(Not(c))))
+      case Not(Or(disjuncts@_*)) => And(disjuncts.map(d => pushDownNegations(Not(d))))
       case Not(f) => Not(pushDownNegations(f))
       case Or(disjuncts@_*) => Or(disjuncts.map(d => pushDownNegations(d)))
       case And(conjuncts@_*) => And(conjuncts.map(c => pushDownNegations(c)))
@@ -139,31 +139,19 @@ object CNFConversion {
       case And(conjuncts@_*) =>
         // recurse first:
         val processedConjuncts = conjuncts.map(c => flatten(c))
-        // if all the conjuncts are again Ands or are literals we can flatten
-        // in other words, if there does not exist a conjunct that is an Or()
-        if(!SmtlibUtils.hasOrElement(processedConjuncts)) {
-          val unwrappedConjuncts = processedConjuncts.flatMap {
-            case And(innerConjuncts@_*) => innerConjuncts
-            case c => List(c)
-          }
-          And(unwrappedConjuncts)
-        } else {
-          And(processedConjuncts)
+        val unwrappedConjuncts = processedConjuncts.flatMap {
+          case And(innerConjuncts@_*) => innerConjuncts
+          case c => List(c)
         }
+        And(unwrappedConjuncts)
       case Or(disjuncts@_*) =>
         // recurse first:
         val processedDisjuncts = disjuncts.map(c => flatten(c))
-        // if all the disjuncts are again Ors or are literals we can flatten
-        // in other words, if there does not exist a disjunct that is an And()
-        if(!SmtlibUtils.hasAndElement(processedDisjuncts)) {
-          val unwrappedDisjuncts = processedDisjuncts.flatMap {
-            case Or(innerDisjuncts@_*) => innerDisjuncts
-            case c => List(c)
-          }
-          Or(unwrappedDisjuncts)
-        } else {
-          Or(processedDisjuncts)
+        val unwrappedDisjuncts = processedDisjuncts.flatMap {
+          case Or(innerDisjuncts@_*) => innerDisjuncts
+          case c => List(c)
         }
+        Or(unwrappedDisjuncts)
       case _ => formula
     }
   }
