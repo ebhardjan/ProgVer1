@@ -1,0 +1,12 @@
+(set-option :produce-models true)
+(set-logic QF_UF)
+(declare-fun p3() Bool)
+(declare-fun p4() Bool)
+(declare-fun p2() Bool)
+(declare-fun p1() Bool)
+(declare-fun p0() Bool)
+(assert
+(or (and (or p3 p4) (not p2)) (= (= p1 p0) (and true p2 p3)) (or (=> true p4) (=> true p1) (=> p3 false)))
+)
+(check-sat)
+(get-model)
