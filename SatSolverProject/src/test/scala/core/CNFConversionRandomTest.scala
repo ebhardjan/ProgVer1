@@ -17,7 +17,7 @@ class CNFConversionRandomTest extends FunSuite {
   val numberOfRandomFormulas = 250
   val storeFailedFormulas = true
 
-  // random formula generator
+  // random formula generator parameters
   val numberOfVariables = 100
   val maxChildCount = 25
   val minDepth = 4

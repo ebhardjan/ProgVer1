@@ -9,3 +9,7 @@ target
 *.iws
 .idea
 out
+
+# temporary file that is used in the CNF conversion
+tmp.smt2
+
