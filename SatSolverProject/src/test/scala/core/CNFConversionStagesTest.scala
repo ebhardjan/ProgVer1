@@ -91,6 +91,12 @@ class CNFConversionStagesTest extends FunSuite {
       "(and (or a b c) (or a b d) (or a e))")
   }
 
+  test("distribute_conjuncts_over_disjuncts_simple4") {
+    val cnf = formulaAfterDistributeConjunctsOverDisjuncts("distribute_conjuncts_over_disjuncts_simple4")
+    assertEqualsIgnoringWhitespaces(cnf.toString,
+      "(or a b c)")
+  }
+
   test("distribute_conjuncts_over_disjuncts_exception") {
     intercept[IllegalStateException] {
       formulaAfterDistributeConjunctsOverDisjuncts("implies_simple1")

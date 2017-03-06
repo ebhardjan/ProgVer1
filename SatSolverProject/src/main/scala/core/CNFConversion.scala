@@ -13,8 +13,7 @@ object CNFConversion {
     f = pushDownNegations(f)
     f = removeTopAndBottom(f)
     f = distributeConjunctionsOverDisjunctions(f)
-    f = removeDuplicateClausesAndDuplicateLiterals(f)
-    flatten(f) // TODO: not sure if this is necessary...
+    removeDuplicateClausesAndDuplicateLiterals(f)
   }
 
   /**
@@ -134,6 +133,7 @@ object CNFConversion {
   /**
     * helper method that flattens nested Ors and Ands
     */
+  //TODO potential optimization potential, don't flatten all the way down to all leaves but only a certain number of steps?
   def flatten(formula: Term): Term = {
     formula match {
       case And(conjuncts@_*) =>
