@@ -62,9 +62,7 @@ object DPSolver extends SATSolvingAlgorithm {
     }
     applyResolutionRule(formula, model) match {
       case Some((f, m)) => return checkSAT(f, m)
-      case None =>
     }
-    None
   }
 
   /**
