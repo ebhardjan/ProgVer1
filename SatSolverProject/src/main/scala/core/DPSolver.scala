@@ -23,11 +23,11 @@ object DPSolver extends SATSolvingAlgorithm {
     // Iterate until there is an empty clause (unsat) or there are no more clauses (sat)
     while (true) {
       var changed = false
-      val simplified = simplifyTautologies(cnfRep, model)
+      val simplified = removeTautologies(cnfRep, model)
       cnfRep = simplified._1
       model = simplified._2
       // println("Looping: \n" + cnfRep.toString)
-      if (cnfRep.containsEmptyClause()) {
+      if (SolverUtils.containsEmptyClause(cnfRep)) {
         return None
       } else if (cnfRep.conjuncts.isEmpty) {
         // There are no more conjuncts -> the formula is satisfiable. If there are still unresolved variables on the
@@ -35,10 +35,13 @@ object DPSolver extends SATSolvingAlgorithm {
         if (resolutionClauseStack.nonEmpty) model = resolveMissingAssignments(model)
         return Some(model)
       }
-      var result = applyUnitPropagation(cnfRep, model)
-      cnfRep = result._1
-      model = result._2
-      changed = result._3
+      var result: (InternalCNF, Map[String,Boolean], Boolean) = null
+      if (!changed) {
+        result = applyUnitPropagation(cnfRep, model)
+        cnfRep = result._1
+        model = result._2
+        changed = result._3
+      }
       if (!changed) {
         result = applyPureLiteralRule(cnfRep, model)
         cnfRep = result._1
@@ -55,10 +58,14 @@ object DPSolver extends SATSolvingAlgorithm {
     None
   }
 
+/*  def addLiteralsToModel(clause: InternalClause, model: Map[String, Boolean]): Map[String, Boolean] = {
+    model ++ (for (d <- clause.disjuncts) yield ())
+  }*/
+
   // Remove Tautologies from formula, i.e. all clauses where a literal appears positively and negatively. If the
   // resulting cnf is empty, the input was a tautology. In that case update the model by setting all the removed
-  // variables to true.
-  def simplifyTautologies(formula: InternalCNF, model: Map[String,Boolean]): (InternalCNF, Map[String,Boolean]) = {
+  // variables to true and update the values of other disjuncts.
+  def removeTautologies(formula: InternalCNF, model: Map[String,Boolean]): (InternalCNF, Map[String,Boolean]) = {
     val newConjuncts = for (c <- formula.conjuncts if {
       (for (d @ InternalDisjunct(InternalLiteral(polarity, name), isActive) <- c.disjuncts if {
         isActive && (c.disjuncts contains InternalDisjunct(InternalLiteral(!polarity, name), true))
@@ -82,14 +89,15 @@ object DPSolver extends SATSolvingAlgorithm {
   // which contain the literal from the formula.
   def applyPureLiteralRule(formula: InternalCNF, model: Map[String,Boolean]) :
   (InternalCNF, Map[String,Boolean], Boolean) = {
-    val pureLiteral = findPureLiteral(formula)
+    val pureLiteral = SolverUtils.findPureLiteral(formula)
     pureLiteral match {
       case None => (formula, model, false)
-      case Some((literal, value)) =>
+      case Some((polarity, literal)) =>
         // if there is a pure literal, remove all clauses containing it from the formula
-        val newConjuncts: Set[InternalClause] = takeClausesNotContainingLiteral(formula, literal, value)
+        val newConjuncts: Set[InternalClause] = SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts,
+          InternalLiteral(polarity, literal))
         val newFormula: InternalCNF = InternalCNF(newConjuncts)
-        val newModel: Map[String,Boolean] = model + (literal -> value)
+        val newModel: Map[String,Boolean] = model + (literal -> polarity)
         (newFormula, newModel, true)
     }
   }
@@ -110,9 +118,9 @@ object DPSolver extends SATSolvingAlgorithm {
     val newModel = model + (literal.name -> literal.polarity)
     // remove all clauses which have the variable in the same polarity
     var newConjuncts: Set[InternalClause] =
-      takeClausesNotContainingLiteral(formula, literal.name, literal.polarity)
+      SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts, literal)
     // remove the literal with opposite polarity from clauses
-    newConjuncts = removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
+    newConjuncts = SolverUtils.removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
     (InternalCNF(newConjuncts), newModel, true)
   }
 
@@ -124,8 +132,10 @@ object DPSolver extends SATSolvingAlgorithm {
     // Pick a literal to do resolution on
     val victimLiteral = pickVictimLiteral(formula)
     // Find all clauses where the victim literal appears positively and negatively respectively
-    val positiveClauses = takeClausesContainingLiteral(formula, victimLiteral.name, true)
-    val negativeClauses = takeClausesContainingLiteral(formula, victimLiteral.name, false)
+    val positiveClauses = SolverUtils.takeClausesContainingLiteral(formula.conjuncts,
+      InternalLiteral(true, victimLiteral.name))
+    val negativeClauses = SolverUtils.takeClausesContainingLiteral(formula.conjuncts,
+      InternalLiteral(false, victimLiteral.name))
     // Add a removed clause to stack for later resolving the variable assignment.
     resolutionClauseStack = (victimLiteral.name, positiveClauses) :: resolutionClauseStack
     // Add new clauses to formula
@@ -133,31 +143,6 @@ object DPSolver extends SATSolvingAlgorithm {
                           nc <- negativeClauses} yield buildNewResolutionClause(pc, nc, victimLiteral.name)
     val newFormula: InternalCNF = InternalCNF(formula.conjuncts -- positiveClauses -- negativeClauses ++ newClauses)
     (newFormula, model, false)
-  }
-
-  // Return the set of clauses in formula which contain the literal with given name and polarity and is active.
-  def takeClausesContainingLiteral(formula: InternalCNF, literalName: String, polarity: Boolean) :
-  Set[InternalClause] = {
-    for (clause <- formula.conjuncts if {
-      (for (disjunct @ InternalDisjunct(InternalLiteral(pol, varName), isActive) <- clause.disjuncts if {
-        varName == literalName && pol == polarity && isActive
-      }) yield disjunct).nonEmpty
-    }) yield clause
-  }
-
-  // Return the set of clauses in formula which do not contain the literal with given name and polarity and is active.
-  def takeClausesNotContainingLiteral(formula: InternalCNF, literalName: String, polarity: Boolean) :
-  Set[InternalClause] = {
-    for (clause <- formula.conjuncts if {
-      (for (disjunct @ InternalDisjunct(InternalLiteral(pol, varName), isActive) <- clause.disjuncts if {
-        varName == literalName && pol == polarity && isActive
-      }) yield disjunct).isEmpty
-    }) yield clause
-  }
-
-  // From a set of clauses, return a set containing the same clauses with a given literal removed from all of them.
-  def removeLiteralFromClauses(clauses: Set[InternalClause], literal: InternalLiteral): Set[InternalClause] = {
-    for (c <- clauses) yield InternalClause(for (d <- c.disjuncts if d.literal != literal) yield d)
   }
 
   // Return a literal on which to do resolution. For now just return first occurring literal.
@@ -173,27 +158,13 @@ object DPSolver extends SATSolvingAlgorithm {
     InternalClause(firstDisjuncts ++ secondDisjuncts)
   }
 
-  // A literal is pure if it occurs only positively or only negatively in the formula. Return None if no such literal
-  // exists, otherwise return the first one found together with its polarity.
-  def findPureLiteral(formula: InternalCNF): Option[(String,Boolean)] = {
-    val positives: Set[String] = formula.vars(true)
-    val negatives: Set[String] = formula.vars(false)
-    if ((positives -- negatives).nonEmpty) {
-      Some((positives -- negatives).head, true)
-    } else if ((negatives -- positives).nonEmpty) {
-      Some((negatives -- positives).head, false)
-    } else {
-      None
-    }
-  }
-
   // Go through all the clauses in 'resolutionClauseStack' and add the correct value to the model.
   def resolveMissingAssignments(model: Map[String,Boolean]): Map[String,Boolean] = {
     resolutionClauseStack match {
       case List() => model
       case (varName, positiveClauses) :: remainingList =>
         resolutionClauseStack = remainingList
-        val strippedPositives = removeLiteralFromClauses(positiveClauses, InternalLiteral(true, varName))
+        val strippedPositives = SolverUtils.removeLiteralFromClauses(positiveClauses, InternalLiteral(true, varName))
         val hasFalsePositiveClause = strippedPositives.foldLeft[Boolean](false)((b, clause) => {
           b || !SolverUtils.evaluateClause(clause, model)
         })

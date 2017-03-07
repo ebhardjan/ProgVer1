@@ -37,5 +37,4 @@ object SolverTestUtils {
     internal.conjuncts.forall(clause => SolverUtils.evaluateClause(clause, model))
   }
 
-
 }

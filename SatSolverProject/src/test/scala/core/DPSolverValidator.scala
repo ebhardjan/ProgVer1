@@ -15,14 +15,14 @@ object DPSolverValidator {
     */
   def solveFormulaAndValidate(formula: Term): Boolean = {
 
-    // is the formula now really in cnf?
+    // is the formula in cnf?
     if (!PropositionalLogic.isCNF(formula)) {
       println("Formula not in CNF!")
       return false
     }
 
     val dpResult: Option[Map[String, Boolean]] = DPSolver.checkSAT(formula)
-    // is the formula equivalent to the original one?
+    // is the result the same as z3 solver gives / is the model valid?
     if (!SolverTestUtils.checkSATResult(dpResult, formula)) {
       println("The result from DP is not the same the z3 solver gives.")
       return false
