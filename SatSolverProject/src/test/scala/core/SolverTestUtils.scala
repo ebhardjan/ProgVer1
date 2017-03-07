@@ -10,18 +10,17 @@ import sys.process._
   */
 object SolverTestUtils {
   /**
-    * Run z3 solver on formula and compare result with the given model.
+    * Check a candidate model for correctness, if there is no model, run z3 solver to check if the formula is unsat.
     *
     * @param result The result to be checked for correctness. None for unsat, model for sat.
     * @param formula The formula to be checked. Must be in cnf.
     * @return True if the z3 solver returns the same result as 'result', false otherwise.
     */
   def checkSATResult(result: Option[Map[String, Boolean]], formula: Term): Boolean = {
-    val filename1 = CNFConversionTestUtils.writeFormulaToSmt2File(formula, "tmp.smt2", getModel = false)
-    val z3result: String = "z3 -smt2 " + filename1 !!
-
     result match {
-      case None => z3result.contains("unsat")
+      case None => val filename1 = CNFConversionTestUtils.writeFormulaToSmt2File(formula, "tmp.smt2", getModel = false)
+          val z3result: String = "z3 -smt2 " + filename1 !!;
+          z3result.contains("unsat")
       case Some(map) => checkModelForCorrectness(formula, map)
     }
   }

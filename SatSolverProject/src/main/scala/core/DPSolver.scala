@@ -23,6 +23,9 @@ object DPSolver extends SATSolvingAlgorithm {
     // Iterate until there is an empty clause (unsat) or there are no more clauses (sat)
     while (true) {
       var changed = false
+      val simplified = simplifyTautologies(cnfRep, model)
+      cnfRep = simplified._1
+      model = simplified._2
       // println("Looping: \n" + cnfRep.toString)
       if (cnfRep.containsEmptyClause()) {
         return None
@@ -32,12 +35,12 @@ object DPSolver extends SATSolvingAlgorithm {
         if (resolutionClauseStack.nonEmpty) model = resolveMissingAssignments(model)
         return Some(model)
       }
-      var result = applyPureLiteralRule(cnfRep, model)
+      var result = applyUnitPropagation(cnfRep, model)
       cnfRep = result._1
       model = result._2
       changed = result._3
       if (!changed) {
-        result = applyUnitPropagation(cnfRep, model)
+        result = applyPureLiteralRule(cnfRep, model)
         cnfRep = result._1
         model = result._2
         changed = result._3
@@ -87,8 +90,7 @@ object DPSolver extends SATSolvingAlgorithm {
         val newConjuncts: Set[InternalClause] = takeClausesNotContainingLiteral(formula, literal, value)
         val newFormula: InternalCNF = InternalCNF(newConjuncts)
         val newModel: Map[String,Boolean] = model + (literal -> value)
-        val simplified = simplifyTautologies(newFormula, newModel)
-        (simplified._1, simplified._2, true)
+        (newFormula, newModel, true)
     }
   }
 
@@ -111,8 +113,7 @@ object DPSolver extends SATSolvingAlgorithm {
       takeClausesNotContainingLiteral(formula, literal.name, literal.polarity)
     // remove the literal with opposite polarity from clauses
     newConjuncts = removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
-    val simplified = simplifyTautologies(InternalCNF(newConjuncts), newModel)
-    (simplified._1, simplified._2, true)
+    (InternalCNF(newConjuncts), newModel, true)
   }
 
   // Apply the resolution rule. Pick a victim literal from the formula and do resolution on it. Add the victim variable
@@ -131,8 +132,7 @@ object DPSolver extends SATSolvingAlgorithm {
     val newClauses = for {pc <- positiveClauses
                           nc <- negativeClauses} yield buildNewResolutionClause(pc, nc, victimLiteral.name)
     val newFormula: InternalCNF = InternalCNF(formula.conjuncts -- positiveClauses -- negativeClauses ++ newClauses)
-    val simplified = simplifyTautologies(newFormula, model)
-    (simplified._1, simplified._2, false)
+    (newFormula, model, false)
   }
 
   // Return the set of clauses in formula which contain the literal with given name and polarity and is active.
