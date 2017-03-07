@@ -160,16 +160,6 @@ object DPSolver extends SATSolvingAlgorithm {
     for (c <- clauses) yield InternalClause(for (d <- c.disjuncts if d.literal != literal) yield d)
   }
 
-  // Evaluate a clause given a model containing truth assignments.
-  def evaluateClause(clause: InternalClause, model: Map[String,Boolean]): Boolean = {
-    clause.disjuncts.foldLeft[Boolean](false)((b, disjunct) => b || {
-      if (disjunct.literal.polarity) {
-        model(disjunct.literal.name)
-      } else {
-        !model(disjunct.literal.name)
-      }})
-  }
-
   // Return a literal on which to do resolution. For now just return first occurring literal.
   def pickVictimLiteral(formula: InternalCNF): InternalLiteral = {
     formula.conjuncts.head.disjuncts.head.literal
@@ -205,7 +195,7 @@ object DPSolver extends SATSolvingAlgorithm {
         resolutionClauseStack = remainingList
         val strippedPositives = removeLiteralFromClauses(positiveClauses, InternalLiteral(true, varName))
         val hasFalsePositiveClause = strippedPositives.foldLeft[Boolean](false)((b, clause) => {
-          b || !evaluateClause(clause, model)
+          b || !SolverUtils.evaluateClause(clause, model)
         })
         resolveMissingAssignments(model + (varName -> hasFalsePositiveClause))
     }
