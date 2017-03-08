@@ -117,7 +117,7 @@ object DPSolver extends SATSolvingAlgorithm {
         resolutionClauseStack = remainingList
         val strippedPositives = SolverUtils.removeLiteralFromClauses(positiveClauses, InternalLiteral(true, varName))
         val hasFalsePositiveClause = strippedPositives.foldLeft[Boolean](false)((b, clause) => {
-          b || !SolverUtils.evaluateClause(clause, model)
+          b || !SolverUtils.evaluateClause(clause, model, true)
         })
         resolveMissingAssignments(model + (varName -> hasFalsePositiveClause))
     }

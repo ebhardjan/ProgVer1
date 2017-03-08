@@ -59,7 +59,8 @@ trait SATSolvingAlgorithm {
     if (newConjuncts == formula.conjuncts) return None
 
     // If a variable was completely removed from the formula, add it to the model (just pick true).
-    Some(InternalCNF(newConjuncts), addRemovedVariablesToModel(formula.conjuncts, newConjuncts, model))
+    // Some(InternalCNF(newConjuncts), addRemovedVariablesToModel(formula.conjuncts, newConjuncts, model))
+    Some(InternalCNF(newConjuncts), model)
   }
 
   /**
@@ -77,7 +78,7 @@ trait SATSolvingAlgorithm {
           InternalLiteral(polarity, literal))
         val newFormula: InternalCNF = InternalCNF(newConjuncts)
         val newModel: Map[String,Boolean] = model + (literal -> polarity)
-        Some((newFormula, addRemovedVariablesToModel(formula.conjuncts, newFormula.conjuncts, newModel)))
+        Some((newFormula, newModel))
     }
   }
 
@@ -102,7 +103,7 @@ trait SATSolvingAlgorithm {
       SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts, literal)
     // remove the literal with opposite polarity from clauses
     newConjuncts = SolverUtils.removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
-    Some((InternalCNF(newConjuncts), addRemovedVariablesToModel(formula.conjuncts, newConjuncts, newModel)))
+    Some((InternalCNF(newConjuncts), newModel))
   }
 
 }

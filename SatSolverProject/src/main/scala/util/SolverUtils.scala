@@ -11,12 +11,19 @@ object SolverUtils {
     *
     * @param clause The clause to be evaluated.
     * @param model The model for the clause.
+    * @param interpretMissingVars If this is set to true, act as if those variables which do not occur in the model were
+    *                             assigned true.
     * @return The truth value of the clause under the given model.
     */
-  def evaluateClause(clause: InternalClause, model: Map[String, Boolean]): Boolean = {
+  def evaluateClause(clause: InternalClause, model: Map[String, Boolean], interpretMissingVars: Boolean = false)
+  : Boolean = {
     clause.disjuncts.foldLeft[Boolean](false)((b, disjunct: InternalDisjunct) => b || {
       model getOrElse(disjunct.literal.name, None) match {
-        case None => false
+        case None => if (interpretMissingVars) {
+          disjunct.literal.polarity
+        } else {
+          false
+        }
         case value => disjunct.literal.polarity == value
       }
     }) || isTautology(clause)
