@@ -31,7 +31,7 @@ class DPSolverTest extends FunSuite {
   for (f <- getListOfSmt2Files(folder)) {
     test("dp_solver_" + f) {
       val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
-      assert(DPSolverValidator.solveFormulaAndValidate(formula))
+      assert(SolverValidator.solveFormulaAndValidate(formula, DPSolver))
     }
   }
 
@@ -43,6 +43,6 @@ class DPSolverTest extends FunSuite {
     val testNr = "09"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
-    assert(DPSolverValidator.solveFormulaAndValidate(formula))
+    assert(SolverValidator.solveFormulaAndValidate(formula, DPSolver))
   }
 }
