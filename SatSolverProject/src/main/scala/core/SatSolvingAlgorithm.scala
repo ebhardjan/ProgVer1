@@ -33,9 +33,23 @@ trait SATSolvingAlgorithm {
     }) yield d.literal.name -> d.literal.polarity)
   }
 
-  /** Remove Tautologies from formula, i.e. all clauses where a literal appears positively and negatively. If the
-    * resulting cnf is empty, the input was a tautology. In that case update the model by setting all the removed
-    * variables to true and update the values of other disjuncts.
+  /**
+    * Add all variables which appear in the old set of clauses but not in the new one to the model. I.e. just map them
+    * to true.
+    */
+  def addRemovedVariablesToModel(oldSet: Set[InternalClause], newSet: Set[InternalClause], model: Map[String, Boolean])
+  : Map[String, Boolean] = {
+    val removedVariables = for {c <- oldSet
+                                InternalDisjunct(InternalLiteral(_, name), isActive) <- c.disjuncts if {
+        isActive && !SolverUtils.containsVariable(newSet, name)
+      }} yield name
+    model ++ (for (v <- removedVariables if model.getOrElse(v, None) == None) yield v -> true)
+  }
+
+  /**
+    * Remove Tautologies from formula, i.e. all clauses where a literal appears positively and negatively. Return None
+    * if the formula remains unchanged. Otherwise return the new formula together with a new model. The new model is
+    * the same as the old plus assigning those variables which were completely removed from the formula to true.
     */
   def removeTautologies(formula: InternalCNF, model: Map[String,Boolean])
   : Option[(InternalCNF, Map[String,Boolean])] = {
@@ -45,14 +59,7 @@ trait SATSolvingAlgorithm {
     if (newConjuncts == formula.conjuncts) return None
 
     // If a variable was completely removed from the formula, add it to the model (just pick true).
-    val removedVariables = for {c <- formula.conjuncts
-                                d @ InternalDisjunct(InternalLiteral(polarity, name), isActive) <- c.disjuncts if {
-        isActive && (c.disjuncts contains InternalDisjunct(InternalLiteral(!polarity, name), true))
-      }} yield d.literal
-    val newAssignments = for (l @ InternalLiteral(polarity, name) <- removedVariables if {
-      polarity && !SolverUtils.containsVariable(newConjuncts, name)
-    }) yield l.name -> true
-    Some(InternalCNF(newConjuncts), model ++ newAssignments)
+    Some(InternalCNF(newConjuncts), addRemovedVariablesToModel(formula.conjuncts, newConjuncts, model))
   }
 
   /**
@@ -70,7 +77,7 @@ trait SATSolvingAlgorithm {
           InternalLiteral(polarity, literal))
         val newFormula: InternalCNF = InternalCNF(newConjuncts)
         val newModel: Map[String,Boolean] = model + (literal -> polarity)
-        Some((newFormula, newModel))
+        Some((newFormula, addRemovedVariablesToModel(formula.conjuncts, newFormula.conjuncts, newModel)))
     }
   }
 
@@ -95,7 +102,7 @@ trait SATSolvingAlgorithm {
       SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts, literal)
     // remove the literal with opposite polarity from clauses
     newConjuncts = SolverUtils.removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
-    Some((InternalCNF(newConjuncts), newModel))
+    Some((InternalCNF(newConjuncts), addRemovedVariablesToModel(formula.conjuncts, newConjuncts, newModel)))
   }
 
 }

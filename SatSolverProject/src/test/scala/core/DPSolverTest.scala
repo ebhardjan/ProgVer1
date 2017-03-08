@@ -39,7 +39,7 @@ class DPSolverTest extends FunSuite {
     * for debugging...
     */
   test("dummy_test") {
-    // paste uuid of failing test here to debug manually
+    // paste number of failing test here to debug manually
     val testNr = "09"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)

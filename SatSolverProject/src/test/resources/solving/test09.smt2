@@ -1,17 +1,18 @@
-( set-option :produce-models true )
-( set-logic QF_UF )
+(set-option :produce-models true)
+(set-logic QF_UF)
 
-( declare-fun p1 () Bool )
-( declare-fun p2 () Bool )
-( declare-fun p3 () Bool )
-( declare-fun p4 () Bool )
+(declare-fun p33() Bool)
+(declare-fun p43() Bool)
+(declare-fun p51() Bool)
+(declare-fun p74() Bool)
 
-( assert ( and
- (or p1 (not p3))
- (or (not p1) p2 p3 p4)
- (or p1 (not p4))
- (or p1 (not p2))
+(assert
+(and
+  (or (not p43) (not p23) p51)
+  (or (not p43) p23 (not p51))
+  (or p74 p23 )
+  (or p33 (not p51))
+  (or p43 (not p74) (not p33) (not p51) (not p23))
 ))
-
-( check-sat )
-( get-model )
+(check-sat)
+(get-model)
