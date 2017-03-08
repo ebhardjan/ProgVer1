@@ -31,7 +31,7 @@ object SolverUtils {
   def isTautology(clause: InternalClause): Boolean = {
     (for (d @ InternalDisjunct(InternalLiteral(polarity, name), isActive) <- clause.disjuncts if {
       isActive && (clause.disjuncts contains InternalDisjunct(InternalLiteral(!polarity, name), true))
-    }) yield d).isEmpty
+    }) yield d).nonEmpty
   }
 
   /**
@@ -46,14 +46,26 @@ object SolverUtils {
   }
 
   /**
+    * Check if a set of clauses contains a variable (no matter of which polarity).
+    *
+    * @param set The set of clauses to check.
+    * @param variableName The name of the variable to find
+    * @return True if the set contains the variable, false otherwise.
+    */
+  def containsVariable(set: Set[InternalClause], variableName: String): Boolean = {
+    set.foldLeft[Boolean](false)((b, clause) => b ||
+      clause.disjuncts.foldLeft[Boolean](false)((old, disjunct) => old || disjunct.literal.name == variableName))
+  }
+
+  /**
     * From a set of clauses, take only those which contain a certain literal.
     *
     * @param set The initial set of clauses.
     * @param literal The literal which has to be in all remaining clauses.
     * @return The new set of clauses.
     */
-  def takeClausesContainingLiteral(set: Set[InternalClause], literal: InternalLiteral) :
-  Set[InternalClause] = {
+  def takeClausesContainingLiteral(set: Set[InternalClause], literal: InternalLiteral)
+  : Set[InternalClause] = {
     for (clause <- set if {
       (for (disjunct @ InternalDisjunct(InternalLiteral(pol, varName), isActive) <- clause.disjuncts if {
         varName == literal.name && pol == literal.polarity && isActive
@@ -68,8 +80,8 @@ object SolverUtils {
     * @param literal The literal which can't occurr in any of the remaining clauses.
     * @return The new set of clauses.
     */
-  def takeClausesNotContainingLiteral(set: Set[InternalClause], literal: InternalLiteral) :
-  Set[InternalClause] = {
+  def takeClausesNotContainingLiteral(set: Set[InternalClause], literal: InternalLiteral)
+  : Set[InternalClause] = {
     for (clause <- set if {
       (for (disjunct @ InternalDisjunct(InternalLiteral(pol, varName), isActive) <- clause.disjuncts if {
         varName == literal.name && pol == literal.polarity && isActive
@@ -105,5 +117,19 @@ object SolverUtils {
     } else {
       None
     }
+  }
+
+  /**
+    * Set all variables which occur in the formula but are not assigned a value in the model to 'value'.
+    *
+    * @param formula The formula where the variables occur.
+    * @param model The model with the other assignments.
+    * @param value The value to set the remaining variables to.
+    * @return The new model containing all the old assignments plus the new ones.
+    */
+  def setAllRemainingVariables(formula: InternalCNF, model: Map[String, Boolean], value: Boolean = true)
+  : Map[String, Boolean] = {
+    val allVariables = formula.vars(true) ++ formula.vars(false)
+    model ++ (for (v <- allVariables if model.getOrElse(v, None) == None) yield v -> value)
   }
 }

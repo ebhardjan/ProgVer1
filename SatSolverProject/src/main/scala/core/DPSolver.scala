@@ -25,8 +25,10 @@ object DPSolver extends SATSolvingAlgorithm {
   override def checkSAT(formula: Term): Option[Map[String,Boolean]] = {
     val cnfRep: InternalCNF = CNFRepresentation.convertCNFToInternal(formula)
     val model: Map[String,Boolean] = Map()
-    checkSAT(cnfRep, model)
-
+    checkSAT(cnfRep, model) match {
+      case None => None
+      case Some(map) => Some(SolverUtils.setAllRemainingVariables(cnfRep, map))
+    }
   }
 
   /**
@@ -81,23 +83,19 @@ object DPSolver extends SATSolvingAlgorithm {
   def removeTautologies(formula: InternalCNF, model: Map[String,Boolean]):
   Option[(InternalCNF, Map[String,Boolean])] = {
     val newConjuncts = for (c <- formula.conjuncts if {
-      (for (d @ InternalDisjunct(InternalLiteral(polarity, name), isActive) <- c.disjuncts if {
-        isActive && (c.disjuncts contains InternalDisjunct(InternalLiteral(!polarity, name), true))
-      }) yield d).isEmpty
+      !SolverUtils.isTautology(c)
     }) yield c
     if (newConjuncts == formula.conjuncts) return None
-    if (newConjuncts.isEmpty) {
-      // If a solution was found by doing the simplification, add true for the variable in the model.
-      val removedVariables = for {c <- formula.conjuncts
-                                  d @ InternalDisjunct(InternalLiteral(polarity, name), isActive) <- c.disjuncts if {
-        isActive && (c.disjuncts contains InternalDisjunct(InternalLiteral(!polarity, name), true))
-      }} yield d.literal
-      val newAssignments = for (l @ InternalLiteral(polarity, _) <- removedVariables if polarity) yield l.name -> true
-      val newModel = model ++ newAssignments
-      Some(InternalCNF(Set()), newModel)
-    } else {
-      Some(InternalCNF(newConjuncts), model)
-    }
+
+    // If a variable was completely removed from the formula, add it to the model (just pick true).
+    val removedVariables = for {c <- formula.conjuncts
+                                d @ InternalDisjunct(InternalLiteral(polarity, name), isActive) <- c.disjuncts if {
+      isActive && (c.disjuncts contains InternalDisjunct(InternalLiteral(!polarity, name), true))
+    }} yield d.literal
+    val newAssignments = for (l @ InternalLiteral(polarity, name) <- removedVariables if {
+      polarity && !SolverUtils.containsVariable(newConjuncts, name)
+    }) yield l.name -> true
+    Some(InternalCNF(newConjuncts), model ++ newAssignments)
   }
 
   /**

@@ -34,4 +34,15 @@ class DPSolverTest extends FunSuite {
       assert(DPSolverValidator.solveFormulaAndValidate(formula))
     }
   }
+
+  /**
+    * for debugging...
+    */
+  test("dummy_test") {
+    // paste uuid of failing test here to debug manually
+    val testNr = "09"
+
+    val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
+    assert(DPSolverValidator.solveFormulaAndValidate(formula))
+  }
 }
