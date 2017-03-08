@@ -19,11 +19,7 @@ object SolverUtils {
   : Boolean = {
     clause.disjuncts.foldLeft[Boolean](false)((b, disjunct: InternalDisjunct) => b || {
       model getOrElse(disjunct.literal.name, None) match {
-        case None => if (interpretMissingVars) {
-          disjunct.literal.polarity
-        } else {
-          false
-        }
+        case None => interpretMissingVars && disjunct.literal.polarity
         case value => disjunct.literal.polarity == value
       }
     }) || isTautology(clause)

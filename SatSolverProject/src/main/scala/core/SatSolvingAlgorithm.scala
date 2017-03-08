@@ -25,50 +25,26 @@ trait SATSolvingAlgorithm {
     }
 
   /**
-    * Adds all literals in clause to the model, so that they all evaluate to true.
-    */
-  def addLiteralsToModel(clause: InternalClause, model: Map[String, Boolean]): Map[String, Boolean] = {
-    model ++ (for (d <- clause.disjuncts if {
-      !model.contains(d.literal.name)
-    }) yield d.literal.name -> d.literal.polarity)
-  }
-
-  /**
-    * Add all variables which appear in the old set of clauses but not in the new one to the model. I.e. just map them
-    * to true.
-    */
-  def addRemovedVariablesToModel(oldSet: Set[InternalClause], newSet: Set[InternalClause], model: Map[String, Boolean])
-  : Map[String, Boolean] = {
-    val removedVariables = for {c <- oldSet
-                                InternalDisjunct(InternalLiteral(_, name), isActive) <- c.disjuncts if {
-        isActive && !SolverUtils.containsVariable(newSet, name)
-      }} yield name
-    model ++ (for (v <- removedVariables if model.getOrElse(v, None) == None) yield v -> true)
-  }
-
-  /**
     * Remove Tautologies from formula, i.e. all clauses where a literal appears positively and negatively. Return None
-    * if the formula remains unchanged. Otherwise return the new formula together with a new model. The new model is
-    * the same as the old plus assigning those variables which were completely removed from the formula to true.
+    * if the formula remains unchanged, otherwise return the new formula.
     */
-  def removeTautologies(formula: InternalCNF, model: Map[String,Boolean])
-  : Option[(InternalCNF, Map[String,Boolean])] = {
+  def removeTautologies(formula: InternalCNF, model: Map[String,Boolean]): Option[InternalCNF] = {
     val newConjuncts = for (c <- formula.conjuncts if {
       !SolverUtils.isTautology(c)
     }) yield c
-    if (newConjuncts == formula.conjuncts) return None
-
-    // If a variable was completely removed from the formula, add it to the model (just pick true).
-    // Some(InternalCNF(newConjuncts), addRemovedVariablesToModel(formula.conjuncts, newConjuncts, model))
-    Some(InternalCNF(newConjuncts), model)
+    if (newConjuncts == formula.conjuncts) {
+      None
+    } else {
+      Some(InternalCNF(newConjuncts))
+    }
   }
 
   /**
-    * Apply the pure literal rule. If there is a pure literal, set its value in the model and remove all clauses
-    * which contain the literal from the formula.
+    * Apply the pure literal rule. If there is a pure literal, remove all clauses which contain the literal from the
+    * formula, return the new formula and the new assignment. Otherwise return None.
     */
   def applyPureLiteralRule(formula: InternalCNF, model: Map[String,Boolean])
-  : Option[(InternalCNF, Map[String,Boolean])] = {
+  : Option[(InternalCNF, (String, Boolean))] = {
     val pureLiteral = SolverUtils.findPureLiteral(formula)
     pureLiteral match {
       case None => None
@@ -77,18 +53,17 @@ trait SATSolvingAlgorithm {
         val newConjuncts: Set[InternalClause] = SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts,
           InternalLiteral(polarity, literal))
         val newFormula: InternalCNF = InternalCNF(newConjuncts)
-        val newModel: Map[String,Boolean] = model + (literal -> polarity)
-        Some((newFormula, newModel))
+        Some((newFormula, literal -> polarity))
     }
   }
 
   /**
-    * Apply the unit propagation rule. If there is a clause with a single (active) literal, set this literal in the
-    * model, remove every clause where it appears with the same polarity and remove the literal wherever it appears with
-    * the opposite polarity.
+    * Apply the unit propagation rule. If there is a clause with a single (active) literal, remove every clause where it
+    * appears with the same polarity and remove the literal wherever it appears with the opposite polarity.
+    * Return the new formula and the new assignment for the model. If there is unit clause return None
     */
   def applyUnitPropagation(formula: InternalCNF, model: Map[String,Boolean])
-  : Option[(InternalCNF, Map[String,Boolean])] = {
+  : Option[(InternalCNF, (String, Boolean))] = {
     val unitClauses: Set[InternalClause] = for (c <- formula.conjuncts if {
       (for (d @ InternalDisjunct(_, true) <- c.disjuncts) yield d).size == 1
     }) yield c
@@ -96,14 +71,12 @@ trait SATSolvingAlgorithm {
     val unitClause = unitClauses.head // only do the propagation for one unit variable at a time.
     val variable: InternalDisjunct = (for (d <- unitClause.disjuncts if d.isActive) yield d).head
     val literal: InternalLiteral = variable.literal
-    // add the unit clause to the model
-    val newModel = model + (literal.name -> literal.polarity)
     // remove all clauses which have the variable in the same polarity
     var newConjuncts: Set[InternalClause] =
       SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts, literal)
     // remove the literal with opposite polarity from clauses
     newConjuncts = SolverUtils.removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
-    Some((InternalCNF(newConjuncts), newModel))
+    Some((InternalCNF(newConjuncts), literal.name -> literal.polarity))
   }
 
 }

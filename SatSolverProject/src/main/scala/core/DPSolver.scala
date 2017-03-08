@@ -45,26 +45,20 @@ object DPSolver extends SATSolvingAlgorithm {
       } else {
         return Some(model)
       }
-    } else if (formula.conjuncts.size == 1) {
-      // If there is only one conjunct left, the formula is satisfiable and we add all literals in that last conjunct
-      // to the model.
-      return checkSAT(InternalCNF(Set()), addLiteralsToModel(formula.conjuncts.head, model))
     }
     removeTautologies(formula, model) match {
-      case Some((f, m)) => return checkSAT(f, m)
+      case Some(f) => return checkSAT(f, model)
       case None =>
     }
     applyUnitPropagation(formula, model) match {
-      case Some((f, m)) => return checkSAT(f, m)
+      case Some((f, r)) => return checkSAT(f, model + r)
       case None =>
     }
     applyPureLiteralRule(formula, model) match {
-      case Some((f, m)) => return checkSAT(f, m)
+      case Some((f, r)) => return checkSAT(f, model + r)
       case None =>
     }
-    applyResolutionRule(formula, model) match {
-      case Some((f, m)) => return checkSAT(f, m)
-    }
+    checkSAT(applyResolutionRule(formula), model)
   }
 
   /**
@@ -72,8 +66,7 @@ object DPSolver extends SATSolvingAlgorithm {
     * together with all the clauses where it occurred positively on the resolutionClauseStack for later resolving its
     * truth value.
     */
-  def applyResolutionRule(formula: InternalCNF, model: Map[String, Boolean])
-  : Option[(InternalCNF, Map[String, Boolean])] = {
+  def applyResolutionRule(formula: InternalCNF): InternalCNF = {
     // Pick a literal to do resolution on
     val victimLiteral = pickVictimLiteral(formula)
     // Find all clauses where the victim literal appears positively and negatively respectively
@@ -86,8 +79,7 @@ object DPSolver extends SATSolvingAlgorithm {
     // Add new clauses to formula
     val newClauses = for {pc <- positiveClauses
                           nc <- negativeClauses} yield buildNewResolutionClause(pc, nc, victimLiteral.name)
-    val newFormula: InternalCNF = InternalCNF(formula.conjuncts -- positiveClauses -- negativeClauses ++ newClauses)
-    Some((newFormula, model))
+    InternalCNF(formula.conjuncts -- positiveClauses -- negativeClauses ++ newClauses)
   }
 
   /**
