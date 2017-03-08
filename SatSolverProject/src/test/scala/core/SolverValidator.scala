@@ -6,14 +6,15 @@ import util.PropositionalLogic
 /**
   * Created by Severin on 2017-03-06.
   */
-object DPSolverValidator {
+object SolverValidator {
   /**
-    * Solves given formula in cnf using DP Algorithm and validates the result.
+    * Solves given formula in cnf using the given algorithm and validates the result.
     *
     * @param formula propositional logic formula in cnf
+    * @param solver  the SatSolver to use
     * @return whether the dp algorithms provided the correct result or not
     */
-  def solveFormulaAndValidate(formula: Term): Boolean = {
+  def solveFormulaAndValidate(formula: Term, solver: SATSolvingAlgorithm): Boolean = {
 
     // is the formula in cnf?
     if (!PropositionalLogic.isCNF(formula)) {
@@ -21,7 +22,7 @@ object DPSolverValidator {
       return false
     }
 
-    val dpResult: Option[Map[String, Boolean]] = DPSolver.checkSAT(formula)
+    val dpResult: Option[Map[String, Boolean]] = solver.checkSAT(formula)
     // is the result the same as z3 solver gives / is the model valid?
     if (!SolverTestUtils.checkSATResult(dpResult, formula)) {
       println("The result from DP is not the same the z3 solver gives.")
