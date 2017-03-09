@@ -15,12 +15,12 @@ object CDCLSolver extends SATSolvingAlgorithm {
   override def checkSAT(formula: Term): Option[Map[String, Boolean]] = {
     val cnfRep: InternalCNF = CNFRepresentation.convertCNFToInternal(formula)
     val root = RootNode("root", _varValue = true, cnfRep)
-    runCDCL(root, root) match {
-      case None => None
-      case Some(graph) => Some(graph.toModel)
+    if (runCDCL(root, root)) {
+      Some(root.toModel)
+    } else {
+      None
     }
   }
-
 
   /**
     * Does tautology removal, unit propagation and pure literal elimination until either a conflict is reached, or we
@@ -71,13 +71,31 @@ object CDCLSolver extends SATSolvingAlgorithm {
   /**
     * Recursively apply the CDCL steps until the SAT question is answered.
     */
-  def runCDCL(graph: RootNode, lastNode: GraphNode): Option[RootNode] = {
+  def runCDCL(graph: RootNode, lastNode: GraphNode): Boolean = {
+    // TODO currently the unsat case is not detected!
     runToComplete(graph, lastNode)
-    // TODO check for conflict and jump back in case of a conflict
-
-    // TODO otherwise pick another decision literal and recurse!
-
-    Some(graph)
+    if (hasConflict(graph)) {
+      // TODO jump back here!
+      val learnedClause = learnClause(graph)
+      // TODO add learned clause to all formulas in the graph!
+      // TODO decide which node is the new lastNode!
+      val newLastNode = ???
+      runCDCL(graph, newLastNode)
+    } else {
+      if (lastNode.formula.conjuncts.isEmpty) {
+        true
+      } else {
+        // if we processed the formula completely and there is no conflict, we are done and return SAT
+        val decisionLiteral = pickDecisionLiteral(lastNode.formula)
+        // remove all the clauses that contain the literal
+        val updatedClauses = SolverUtils.takeClausesNotContainingLiteral(lastNode.formula.conjuncts, decisionLiteral)
+        // remove the negation of the literal from all clauses
+        val updatedFormula = InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
+        val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
+        lastNode.addChild(newNode)
+        runCDCL(graph, lastNode)
+      }
+    }
   }
 
   /**
@@ -94,23 +112,67 @@ object CDCLSolver extends SATSolvingAlgorithm {
   /**
     * Returns true if the given graph has a conflict
     */
-  private[this] def hasConflict(graph: RootNode): Boolean = {
-    ???
+  def hasConflict(graph: RootNode): Boolean = {
+    var model: Map[String, Boolean] = Map()
+
+    def internalHasConflict(graph: GraphNode): Boolean = {
+      if (model.contains(graph.varName) && model(graph.varName) != graph.varValue) {
+        true
+      } else {
+        model = model + (graph.varName -> graph.varValue)
+        if (graph.children.isEmpty) {
+          false
+        } else {
+          graph.children.foldLeft(false)((b, g) => b || internalHasConflict(g))
+        }
+      }
+    }
+
+    internalHasConflict(graph)
   }
 
   /**
     * Pick the next decision literal
     */
-  def pickDecisionLiteral(formula: InternalCNF): InternalLiteral = {
+  private[this] def pickDecisionLiteral(formula: InternalCNF): InternalLiteral = {
     // for now just pick the first literal
     formula.conjuncts.head.disjuncts.head.literal
   }
 
   /**
-    * Retruns a sequence of relevant decision literals in the order they appear in the graph
+    * Returns a sequence of relevant decision literals in the order they appear in the graph
     */
-  def relevantDecisionLiterals(graph: RootNode): Seq[GraphNode] = {
-    ???
+  def relevantDecisionLiterals(graph: GraphNode, conflictLiteral: String): Seq[DecisionLiteral] = {
+    graph match {
+      case DecisionLiteral(_, _, _) =>
+        if (decisionLiteralReachesConflict(graph.asInstanceOf[DecisionLiteral], conflictLiteral)) {
+          graph.children
+            .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: relevantDecisionLiterals(c, conflictLiteral))
+        } else {
+          graph.children
+            .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictLiteral))
+        }
+      case RootNode(_, _, _) => graph.children
+        .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictLiteral))
+      case _ => Seq()
+    }
+  }
+
+  private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictLiteralName: String): Boolean = {
+    def reaches(node: GraphNode): Boolean = {
+      node.children.foldLeft(false)(
+        (b, c) => c match {
+          case NonDecisionLiteral(varName, _, _) =>
+            if (conflictLiteralName.equals(varName)) {
+              return true
+            } else {
+              return b || reaches(c)
+            }
+          case _ => false
+        }
+      )
+    }
+    reaches(node)
   }
 
   /**
