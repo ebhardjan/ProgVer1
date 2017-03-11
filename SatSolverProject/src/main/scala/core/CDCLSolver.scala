@@ -68,33 +68,40 @@ object CDCLSolver extends SATSolvingAlgorithm {
     }
   }
 
+  private[this] def addClauseToAllFormulas(graph: GraphNode, learnedClause: InternalClause): Unit = {
+    graph.formula = InternalCNF(graph.formula.conjuncts + learnedClause)
+    if (graph.children.nonEmpty) {
+      graph.children.foreach(c => addClauseToAllFormulas(c, learnedClause))
+    }
+  }
+
   /**
     * Recursively apply the CDCL steps until the SAT question is answered.
     */
   def runCDCL(graph: RootNode, lastNode: GraphNode): Boolean = {
     // TODO currently the unsat case is not detected!
     runToComplete(graph, lastNode)
-    if (hasConflict(graph)) {
-      // TODO jump back here!
-      val learnedClause = learnClause(graph)
-      // TODO add learned clause to all formulas in the graph!
-      // TODO decide which node is the new lastNode!
-      val newLastNode = ???
-      runCDCL(graph, newLastNode)
-    } else {
-      if (lastNode.formula.conjuncts.isEmpty) {
-        true
-      } else {
-        // if we processed the formula completely and there is no conflict, we are done and return SAT
-        val decisionLiteral = pickDecisionLiteral(lastNode.formula)
-        // remove all the clauses that contain the literal
-        val updatedClauses = SolverUtils.takeClausesNotContainingLiteral(lastNode.formula.conjuncts, decisionLiteral)
-        // remove the negation of the literal from all clauses
-        val updatedFormula = InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
-        val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
-        lastNode.addChild(newNode)
-        runCDCL(graph, lastNode)
-      }
+    val conflictVarName = hasConflict(graph)
+    conflictVarName match {
+      case Some(name) =>
+        val learnedClause = learnClause(graph)
+        val newLastNode = doBackJumping(graph, name)
+        addClauseToAllFormulas(graph, learnedClause)
+        runCDCL(graph, newLastNode)
+      case None =>
+        if (lastNode.formula.conjuncts.isEmpty) {
+          // if we processed the formula completely and there is no conflict, we are done and return SAT
+          true
+        } else {
+          val decisionLiteral = pickDecisionLiteral(lastNode.formula)
+          // remove all the clauses that contain the literal
+          val updatedClauses = SolverUtils.takeClausesNotContainingLiteral(lastNode.formula.conjuncts, decisionLiteral)
+          // remove the negation of the literal from all clauses
+          val updatedFormula = InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
+          val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
+          lastNode.addChild(newNode)
+          runCDCL(graph, lastNode)
+        }
     }
   }
 
@@ -112,18 +119,25 @@ object CDCLSolver extends SATSolvingAlgorithm {
   /**
     * Returns true if the given graph has a conflict
     */
-  def hasConflict(graph: RootNode): Boolean = {
+  def hasConflict(graph: RootNode): Option[String] = {
     var model: Map[String, Boolean] = Map()
 
-    def internalHasConflict(graph: GraphNode): Boolean = {
+    def internalHasConflict(graph: GraphNode): Option[String] = {
       if (model.contains(graph.varName) && model(graph.varName) != graph.varValue) {
-        true
+        Some(graph.varName)
       } else {
         model = model + (graph.varName -> graph.varValue)
         if (graph.children.isEmpty) {
-          false
+          None
         } else {
-          graph.children.foldLeft(false)((b, g) => b || internalHasConflict(g))
+          val conflicts = graph.children.map(c => internalHasConflict(c)).collect({ case Some(s) => s })
+          if (conflicts.size == 1) {
+            Some(conflicts.head)
+          } else if (conflicts.size > 1) {
+            throw new IllegalStateException("More than one conflict in graph!")
+          } else {
+            None
+          }
         }
       }
     }
@@ -142,28 +156,28 @@ object CDCLSolver extends SATSolvingAlgorithm {
   /**
     * Returns a sequence of relevant decision literals in the order they appear in the graph
     */
-  def relevantDecisionLiterals(graph: GraphNode, conflictLiteral: String): Seq[DecisionLiteral] = {
+  def relevantDecisionLiterals(graph: GraphNode, conflictVarName: String): Seq[DecisionLiteral] = {
     graph match {
       case DecisionLiteral(_, _, _) =>
-        if (decisionLiteralReachesConflict(graph.asInstanceOf[DecisionLiteral], conflictLiteral)) {
+        if (decisionLiteralReachesConflict(graph.asInstanceOf[DecisionLiteral], conflictVarName)) {
           graph.children
-            .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: relevantDecisionLiterals(c, conflictLiteral))
+            .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: relevantDecisionLiterals(c, conflictVarName))
         } else {
           graph.children
-            .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictLiteral))
+            .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictVarName))
         }
       case RootNode(_, _, _) => graph.children
-        .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictLiteral))
+        .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictVarName))
       case _ => Seq()
     }
   }
 
-  private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictLiteralName: String): Boolean = {
+  private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictVarName: String): Boolean = {
     def reaches(node: GraphNode): Boolean = {
       node.children.foldLeft(false)(
         (b, c) => c match {
           case NonDecisionLiteral(varName, _, _) =>
-            if (conflictLiteralName.equals(varName)) {
+            if (conflictVarName.equals(varName)) {
               return true
             } else {
               return b || reaches(c)
@@ -172,15 +186,109 @@ object CDCLSolver extends SATSolvingAlgorithm {
         }
       )
     }
+
     reaches(node)
   }
 
   /**
-    * Does the backjumping on the graph
+    * Does the back-jumping on the graph
     */
-  def backJump(graph: RootNode, relevantLiterals: Seq[GraphNode]): Unit = {
-    ???
+  def doBackJumping(graph: RootNode, conflictingVarName: String): GraphNode = {
+    val relevantLiterals = relevantDecisionLiterals(graph, conflictingVarName)
+
+    var rootOfDecisionLiteralRemoval: GraphNode = null
+    if (relevantLiterals.length > 1) {
+      // case where we remove all decision literals starting from the next child of the second last relevant one
+      rootOfDecisionLiteralRemoval = relevantLiterals(relevantLiterals.length - 2)
+    } else {
+      // case where we remove all decision literals, because there is only one relevant one
+      rootOfDecisionLiteralRemoval = graph
+    }
+
+    // cut only one relevant literal + as many others as possible
+    deleteAllDecisionLiteralsStartingWithChildOf(rootOfDecisionLiteralRemoval)
+    // remove the conflict nodes from the graph
+    deleteConflictingLiteral(graph, conflictingVarName)
+    // remove any other not directly reachable NonDecisionLiteral nodes from the graph
+    deleteAllNotDirectlyReachableNonDecisionLiterals(graph)
+
+    // add the negation of the last relevant decision literal
+    val removedRelevantDecisionLiteral = relevantLiterals.last
+    val newDecisionLiteral = DecisionLiteral(removedRelevantDecisionLiteral.varName,
+      !removedRelevantDecisionLiteral.varValue,
+      rootOfDecisionLiteralRemoval.formula)
+    rootOfDecisionLiteralRemoval.addChild(newDecisionLiteral)
+
+    newDecisionLiteral
   }
+
+  private[this] def getParentNode(graph: GraphNode, needle: GraphNode): Option[GraphNode] = {
+    if (graph.children.contains(needle)) {
+      Some(graph)
+    } else {
+      val res = graph.children.map(c => getParentNode(c, needle)).collect({ case Some(graphNode) => graphNode })
+      if (res.size == 1) {
+        Some(res.toIterator.next())
+      } else {
+        None
+      }
+    }
+  }
+
+  private[this] def findFirstDecisionLiteralChild(graph: GraphNode): DecisionLiteral = {
+    val nextDecisionLiteralSet = graph.children.filter(c => c.isInstanceOf[DecisionLiteral])
+    if (nextDecisionLiteralSet.size > 1) {
+      throw new IllegalStateException("Graph contains DecisionLiteral that has more than one DecisionLiteral as " +
+        "children")
+    } else if (nextDecisionLiteralSet.size == 1) {
+      nextDecisionLiteralSet.head.asInstanceOf[DecisionLiteral]
+    } else {
+      null
+    }
+  }
+
+  private[this] def deleteAllDecisionLiteralsStartingWithChildOf(parentOfDecisionLiteral: GraphNode): Unit = {
+    val nextDecisionLiteral = findFirstDecisionLiteralChild(parentOfDecisionLiteral)
+    if (nextDecisionLiteral != null) {
+      deleteAllDecisionLiteralsStartingWithChildOf(nextDecisionLiteral)
+      parentOfDecisionLiteral.removeChild(nextDecisionLiteral)
+    }
+  }
+
+  private[this] def deleteConflictingLiteral(graph: GraphNode, conflictVarName: String): Unit = {
+    graph.children.foreach(c =>
+      if (c.varName.equals(conflictVarName)) {
+        graph.removeChild(c)
+      } else {
+        deleteConflictingLiteral(c, conflictVarName)
+      })
+  }
+
+  def deleteAllNotDirectlyReachableNonDecisionLiterals(graph: GraphNode): Unit = {
+    var reachable: Set[NonDecisionLiteral] = Set()
+
+    def traverseGraphAndAddToReachable(graph: GraphNode): Unit = {
+      graph match {
+        case g: NonDecisionLiteral => reachable += g
+        case _ => graph.children.foreach(c => traverseGraphAndAddToReachable(c))
+      }
+    }
+
+    def deleteAllElementsNotInReachable(graph: GraphNode): Unit = {
+      graph.children.foreach {
+        case child: NonDecisionLiteral =>
+          if (!reachable.contains(child)) {
+            graph.removeChild(child)
+          }
+          deleteAllElementsNotInReachable(child)
+        case child: Any => deleteAllElementsNotInReachable(child)
+      }
+    }
+
+    traverseGraphAndAddToReachable(graph)
+    deleteAllElementsNotInReachable(graph)
+  }
+
 
   /**
     * Returns the new claus that is introduced by the graph cut
@@ -197,14 +305,26 @@ object CDCLSolver extends SATSolvingAlgorithm {
 
 abstract class GraphNode(var varName: String, var varValue: Boolean, var formula: InternalCNF) {
 
-  var children: Seq[GraphNode] = List()
+  var children: Set[GraphNode] = Set()
 
   def addChild(newChild: GraphNode): Unit = {
-    children = children.:+(newChild)
+    val beforeCount = children.size
+    children += newChild
+    val afterCount = children.size
+    if (afterCount != beforeCount + 1) {
+      throw new IllegalStateException("Set of children of graph node did not grow when adding one element! " +
+        "Does the graph already contain the added child?")
+    }
   }
 
-  def addChildren(newChildren: Seq[GraphNode]): Unit = {
-    children ++ newChildren
+  def removeChild(remove: GraphNode): Unit = {
+    val beforeCount = children.size
+    children -= remove
+    val afterCount = children.size
+    if (afterCount != beforeCount - 1) {
+      throw new IllegalStateException("Set of children of graph node did not shrink when removing one element! " +
+        "Does the graph not contain the child?")
+    }
   }
 
   def toMap: Map[String, Boolean] = {
