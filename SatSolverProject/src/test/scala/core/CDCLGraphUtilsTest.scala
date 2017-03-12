@@ -1,12 +1,12 @@
 package core
 
 import org.scalatest.FunSuite
-import util.{InternalClause, InternalDisjunct, InternalLiteral}
+import util._
 
 /**
   * Created by jan on 10.03.17.
   */
-class CDCLSolverUnitTest extends FunSuite {
+class CDCLGraphUtilsTest extends FunSuite {
 
   test("hasConflict") {
     val graph: RootNode = RootNode("rootNode", _varValue = false, null)
@@ -16,7 +16,7 @@ class CDCLSolverUnitTest extends FunSuite {
     b.addChild(NonDecisionLiteral("a", _varValue = true, null))
     graph.addChild(b)
 
-    assert(CDCLSolver.hasConflict(graph).get.equals("a"))
+    assert(CDCLGraphUtils.hasConflict(graph).get.equals("a"))
   }
 
   test("hasNoConflict") {
@@ -27,7 +27,7 @@ class CDCLSolverUnitTest extends FunSuite {
     b.addChild(NonDecisionLiteral("a", _varValue = false, null))
     graph.addChild(b)
 
-    assert(CDCLSolver.hasConflict(graph).isEmpty)
+    assert(CDCLGraphUtils.hasConflict(graph).isEmpty)
   }
 
   test("relevantDecisionLiterals") {
@@ -44,7 +44,7 @@ class CDCLSolverUnitTest extends FunSuite {
     decisionLiteral3.addChild(NonDecisionLiteral("c", _varValue = true, null))
     decisionLiteral2.addChild(decisionLiteral3)
 
-    val relevantDecisionLiterals = CDCLSolver.relevantDecisionLiterals(graph, "c")
+    val relevantDecisionLiterals = CDCLGraphUtils.relevantDecisionLiterals(graph, "c")
 
     assert(relevantDecisionLiterals.equals(Seq(
       DecisionLiteral("a", _varValue = false, null),
@@ -53,7 +53,7 @@ class CDCLSolverUnitTest extends FunSuite {
 
   test("relevantDecisionLiteralsExampleFromSlides") {
     val graph = exampleGraphFromSlides()
-    val relevantDecisionLiterals = CDCLSolver.relevantDecisionLiterals(graph, "u")
+    val relevantDecisionLiterals = CDCLGraphUtils.relevantDecisionLiterals(graph, "u")
 
     assert(relevantDecisionLiterals.equals(Seq(
       DecisionLiteral("p", _varValue = true, null),
@@ -62,8 +62,8 @@ class CDCLSolverUnitTest extends FunSuite {
 
   test("backJumpExampleFromSlides") {
     val graph = exampleGraphFromSlides()
-    val conflictVar = CDCLSolver.hasConflict(graph).get
-    val lastNodeAfterBackjump = CDCLSolver.doBackJumping(graph, conflictVar)
+    val conflictVar = CDCLGraphUtils.hasConflict(graph).get
+    val lastNodeAfterBackjump = CDCLGraphUtils.doBackJumping(graph, conflictVar)
 
     val resultGraph: RootNode = RootNode("rootNode", _varValue = false, null)
     val n = DecisionLiteral("n", _varValue = true, null)
@@ -94,7 +94,7 @@ class CDCLSolverUnitTest extends FunSuite {
     b.addChild(c)
     d.addChild(e)
 
-    CDCLSolver.deleteAllNotDirectlyReachableNonDecisionLiterals(graph)
+    CDCLGraphUtils.deleteAllNotDirectlyReachableNonDecisionLiterals(graph)
 
     val expectedResult = RootNode("rootNode", _varValue = true, null)
     val eA = DecisionLiteral("a", _varValue = true, null)
@@ -116,16 +116,16 @@ class CDCLSolverUnitTest extends FunSuite {
     val p = DecisionLiteral("p", _varValue = true, null)
     val t = DecisionLiteral("t", _varValue = true, null)
 
-    val parents = CDCLSolver.getParentNodes(graph, notU)
+    val parents = CDCLGraphUtils.getParentNodes(graph, notU)
 
     assert(parents.equals(Set(p, t)))
   }
 
   test("learnClause") {
     val graph = exampleGraphFromSlides()
-    val conflictVar = CDCLSolver.hasConflict(graph).get
+    val conflictVar = CDCLGraphUtils.hasConflict(graph).get
 
-    val learnedClause = CDCLSolver.learnClause(graph, conflictVar)
+    val learnedClause = CDCLGraphUtils.learnClause(graph, conflictVar)
 
     // note that the correctness of this depends on how we cut the graph.
     // for the current minimal implementation this is the expected outcome:
