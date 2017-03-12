@@ -8,6 +8,8 @@ import util._
   */
 object CDCLSolver extends SATSolvingAlgorithm {
 
+  var firstDecisionLiteral: InternalLiteral = _
+
   /**
     * Applies the CDCL algorithm to the given formula. Returns None in case of unsat, otherwise the model mapping
     * variables to booleans.
@@ -41,6 +43,7 @@ object CDCLSolver extends SATSolvingAlgorithm {
       case None =>
     }
     applyUnitPropagation(lastNode.formula, root.toModel) match {
+      // TODO construct the graph in a correct way!
       case Some((f, r)) =>
         // check for conflict and only continue with the recursion if there are none
         if (wouldConflict(root.toModel, r)) {
@@ -72,13 +75,19 @@ object CDCLSolver extends SATSolvingAlgorithm {
     * Recursively apply the CDCL steps until the SAT question is answered.
     */
   def runCDCL(graph: RootNode, lastNode: GraphNode): Boolean = {
-    // TODO currently the unsat case is not detected!
     runToComplete(graph, lastNode)
     val conflictVarName = hasConflict(graph)
     conflictVarName match {
       case Some(name) =>
         val learnedClause = learnClause(graph, name)
         val newLastNode = doBackJumping(graph, name)
+
+        if (newLastNode.varName.equals(firstDecisionLiteral.name) &&
+          newLastNode.varValue.equals(!firstDecisionLiteral.polarity)){
+          // we have UNSAT
+          return false
+        }
+
         addClauseToAllFormulas(graph, learnedClause)
         runCDCL(graph, newLastNode)
       case None =>
@@ -143,7 +152,13 @@ object CDCLSolver extends SATSolvingAlgorithm {
     */
   private[this] def pickDecisionLiteral(formula: InternalCNF): InternalLiteral = {
     // for now just pick the first literal
-    formula.conjuncts.head.disjuncts.head.literal
+    val decisionLiteral = formula.conjuncts.head.disjuncts.head.literal
+
+    if (firstDecisionLiteral == null) {
+      firstDecisionLiteral = decisionLiteral
+    }
+
+    decisionLiteral
   }
 
   /**
