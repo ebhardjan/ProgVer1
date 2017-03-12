@@ -1,6 +1,7 @@
 package core
 
 import org.scalatest.FunSuite
+import util.{InternalClause, InternalDisjunct, InternalLiteral}
 
 /**
   * Created by jan on 10.03.17.
@@ -106,6 +107,36 @@ class CDCLSolverUnitTest extends FunSuite {
     eD.addChild(eE)
 
     assert(graph.equals(expectedResult))
+  }
+
+  test("getParentNodes") {
+    val graph = exampleGraphFromSlides()
+
+    val notU = NonDecisionLiteral("u", _varValue = false, null)
+    val p = DecisionLiteral("p", _varValue = true, null)
+    val t = DecisionLiteral("t", _varValue = true, null)
+
+    val parents = CDCLSolver.getParentNodes(graph, notU)
+
+    assert(parents.equals(Set(p, t)))
+  }
+
+  test("learnClause") {
+    val graph = exampleGraphFromSlides()
+    val conflictVar = CDCLSolver.hasConflict(graph).get
+
+    val learnedClause = CDCLSolver.learnClause(graph, conflictVar)
+
+    // note that the correctness of this depends on how we cut the graph.
+    // for the current minimal implementation this is the expected outcome:
+    val expectedClause = InternalClause(
+      Set(
+        InternalDisjunct(InternalLiteral(polarity = false, "r"), isActive = true),
+        InternalDisjunct(InternalLiteral(polarity = false, "t"), isActive = true),
+        InternalDisjunct(InternalLiteral(polarity = false, "p"), isActive = true)
+      )
+    )
+    assert(learnedClause.equals(expectedClause))
   }
 
   def exampleGraphFromSlides(): RootNode = {

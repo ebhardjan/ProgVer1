@@ -68,13 +68,6 @@ object CDCLSolver extends SATSolvingAlgorithm {
     }
   }
 
-  private[this] def addClauseToAllFormulas(graph: GraphNode, learnedClause: InternalClause): Unit = {
-    graph.formula = InternalCNF(graph.formula.conjuncts + learnedClause)
-    if (graph.children.nonEmpty) {
-      graph.children.foreach(c => addClauseToAllFormulas(c, learnedClause))
-    }
-  }
-
   /**
     * Recursively apply the CDCL steps until the SAT question is answered.
     */
@@ -84,7 +77,7 @@ object CDCLSolver extends SATSolvingAlgorithm {
     val conflictVarName = hasConflict(graph)
     conflictVarName match {
       case Some(name) =>
-        val learnedClause = learnClause(graph)
+        val learnedClause = learnClause(graph, name)
         val newLastNode = doBackJumping(graph, name)
         addClauseToAllFormulas(graph, learnedClause)
         runCDCL(graph, newLastNode)
@@ -222,19 +215,6 @@ object CDCLSolver extends SATSolvingAlgorithm {
     newDecisionLiteral
   }
 
-  private[this] def getParentNode(graph: GraphNode, needle: GraphNode): Option[GraphNode] = {
-    if (graph.children.contains(needle)) {
-      Some(graph)
-    } else {
-      val res = graph.children.map(c => getParentNode(c, needle)).collect({ case Some(graphNode) => graphNode })
-      if (res.size == 1) {
-        Some(res.toIterator.next())
-      } else {
-        None
-      }
-    }
-  }
-
   private[this] def findFirstDecisionLiteralChild(graph: GraphNode): DecisionLiteral = {
     val nextDecisionLiteralSet = graph.children.filter(c => c.isInstanceOf[DecisionLiteral])
     if (nextDecisionLiteralSet.size > 1) {
@@ -293,12 +273,40 @@ object CDCLSolver extends SATSolvingAlgorithm {
   /**
     * Returns the new claus that is introduced by the graph cut
     */
-  def learnClause(graph: GraphNode): InternalClause = {
-    // TODO cut the graph
+  def learnClause(graph: GraphNode, conflictVarName: String): InternalClause = {
+    // Cut the graph such that conflicting literals are on one side and all decision literals on the other side
 
-    // TODO identify the edges that cross the boundary
+    // for now let's just do the most easy thing and just put the conflicts on one side and all the other nodes on the
+    // other one.
+    val conflict = NonDecisionLiteral(conflictVarName, _varValue = true, null)
+    val notConflict = NonDecisionLiteral(conflictVarName, _varValue = false, null)
+    val parents = getParentNodes(graph, conflict) ++ getParentNodes(graph, notConflict)
 
-    ???
+    // All the nodes that have outgoing edges are simply the parent nodes.
+    // Create the disjunction of their negations
+    val disjuncts = parents.map(p => InternalDisjunct(InternalLiteral(!p.varValue, p.varName), isActive = true))
+    InternalClause(disjuncts)
+  }
+
+  def getParentNodes(graph: GraphNode, needle: GraphNode): Set[GraphNode] = {
+    if (graph.children.isEmpty) {
+      Set()
+    } else {
+      graph.children.foldLeft[Set[GraphNode]](Set())((s, c) => {
+        if (c.equals(needle)) {
+          s + graph ++ getParentNodes(c, needle)
+        } else {
+          s ++ getParentNodes(c, needle)
+        }
+      })
+    }
+  }
+
+  private[this] def addClauseToAllFormulas(graph: GraphNode, learnedClause: InternalClause): Unit = {
+    graph.formula = InternalCNF(graph.formula.conjuncts + learnedClause)
+    if (graph.children.nonEmpty) {
+      graph.children.foreach(c => addClauseToAllFormulas(c, learnedClause))
+    }
   }
 
 }
@@ -329,9 +337,9 @@ abstract class GraphNode(var varName: String, var varValue: Boolean, var formula
 
   def toMap: Map[String, Boolean] = {
     this match {
-      case RootNode(vN, vV, f) => Map()
-      case NonDecisionLiteral(vN, vV, f) => Map(vN -> vV)
-      case DecisionLiteral(vN, vV, f) => Map(vN -> vV)
+      case RootNode(_, _, _) => Map()
+      case NonDecisionLiteral(vN, vV, _) => Map(vN -> vV)
+      case DecisionLiteral(vN, vV, _) => Map(vN -> vV)
     }
   }
 
