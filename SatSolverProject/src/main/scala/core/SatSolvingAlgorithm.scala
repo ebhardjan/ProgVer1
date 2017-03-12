@@ -62,8 +62,8 @@ trait SATSolvingAlgorithm {
     * appears with the same polarity and remove the literal wherever it appears with the opposite polarity.
     * Return the new formula and the new assignment for the model. If there is unit clause return None
     */
-  def applyUnitPropagation(formula: InternalCNF, model: Map[String,Boolean])
-  : Option[(InternalCNF, (String, Boolean))] = {
+  def applyUnitPropagation(formula: InternalCNF, model: Map[String, Boolean])
+  : Option[(InternalCNF, (String, Boolean), InternalClause)] = {
     val unitClauses: Set[InternalClause] = for (c <- formula.conjuncts if {
       (for (d @ InternalDisjunct(_, true) <- c.disjuncts) yield d).size == 1
     }) yield c
@@ -76,7 +76,7 @@ trait SATSolvingAlgorithm {
       SolverUtils.takeClausesNotContainingLiteral(formula.conjuncts, literal)
     // remove the literal with opposite polarity from clauses
     newConjuncts = SolverUtils.removeLiteralFromClauses(newConjuncts, InternalLiteral(!literal.polarity, literal.name))
-    Some((InternalCNF(newConjuncts), literal.name -> literal.polarity))
+    Some((InternalCNF(newConjuncts), literal.name -> literal.polarity, unitClause))
   }
 
 }

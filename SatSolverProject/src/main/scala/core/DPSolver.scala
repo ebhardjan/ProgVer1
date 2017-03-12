@@ -51,7 +51,7 @@ class DPSolver extends SATSolvingAlgorithm {
       case None =>
     }
     applyUnitPropagation(formula, model) match {
-      case Some((f, r)) => return checkSAT(f, model + r)
+      case Some((f, r, _)) => return checkSAT(f, model + r)
       case None =>
     }
     applyPureLiteralRule(formula, model) match {

@@ -196,6 +196,28 @@ object CDCLGraphUtils {
   }
 
   /**
+    * Returns a node for the literal in the graph
+    */
+  def findNode(graph: GraphNode, needle: InternalLiteral): Option[GraphNode] = {
+    if (graph.varName.equals(needle.name) && graph.varValue.equals(needle.polarity)) {
+      Some(graph)
+    } else {
+      if (graph.children.nonEmpty) {
+        val res = graph.children.map(c => findNode(c, needle)).collect({case Some(n) => n})
+        if (res.size > 1) {
+          throw new IllegalStateException("Graph contains the same element multiple times!")
+        } else if(res.size == 1) {
+          Some(res.iterator.next)
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    }
+  }
+
+  /**
     * Adds the given class to all formulas in the given graph
     *
     * @param learnedClause the new clause we want to just learned and want to add to all formulas

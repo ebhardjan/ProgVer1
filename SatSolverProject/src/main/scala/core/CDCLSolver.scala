@@ -43,8 +43,7 @@ object CDCLSolver extends SATSolvingAlgorithm {
       case None =>
     }
     applyUnitPropagation(lastNode.formula, root.toModel) match {
-      // TODO construct the graph in a correct way!
-      case Some((f, r)) =>
+      case Some((f, r, unitClause)) =>
         // check for conflict and only continue with the recursion if there are none
         if (wouldConflict(root.toModel, r)) {
           lastNode.addChild(NonDecisionLiteral(r._1, r._2, f))
@@ -52,6 +51,14 @@ object CDCLSolver extends SATSolvingAlgorithm {
         } else {
           val newNode = NonDecisionLiteral(r._1, r._2, f)
           lastNode.addChild(newNode)
+          // find all the nodes that were previously in the literal, take their negation and add edges from them to the
+          // new node in case they exists.
+          val previouslyRemovedLiterals = unitClause.disjuncts.filter(d => !d.isActive)
+          previouslyRemovedLiterals
+            .map(l => l.literal)
+            .map(l => CDCLGraphUtils.findNode(root, InternalLiteral(!l.polarity, l.name)))
+            .collect({ case Some(n) => n })
+            .foreach(n => n.addChild(newNode))
           runToComplete(root, newNode)
           return
         }
