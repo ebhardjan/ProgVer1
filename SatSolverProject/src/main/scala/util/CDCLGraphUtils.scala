@@ -168,13 +168,15 @@ object CDCLGraphUtils {
 
     // for now let's just do the most easy thing and just put the conflicts on one side and all the other nodes on the
     // other one.
-    val conflict = NonDecisionLiteral(conflictVarName, _varValue = true, null)
-    val notConflict = NonDecisionLiteral(conflictVarName, _varValue = false, null)
+    val conflict = NonDecisionLiteral(conflictVarName, varValue = true, null)
+    val notConflict = NonDecisionLiteral(conflictVarName, varValue = false, null)
     val parents = getParentNodes(graph, conflict) ++ getParentNodes(graph, notConflict)
 
     // All the nodes that have outgoing edges are simply the parent nodes.
     // Create the disjunction of their negations
-    val disjuncts = parents.map(p => InternalDisjunct(InternalLiteral(!p.varValue, p.varName), isActive = true))
+    val disjuncts = parents
+      .filter(p => !p.isInstanceOf[RootNode])
+      .map(p => InternalDisjunct(InternalLiteral(!p.varValue, p.varName), isActive = true))
     InternalClause(disjuncts)
   }
 

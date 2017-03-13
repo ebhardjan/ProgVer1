@@ -5,18 +5,22 @@ package util
   *
   * Graph representation used in the CDCL algorithm.
   */
-abstract class GraphNode(var varName: String, var varValue: Boolean, var formula: InternalCNF) {
+abstract class GraphNode() {
+
+  var varName: String
+  var varValue: Boolean
+  var formula: InternalCNF
 
   var children: Set[GraphNode] = Set()
 
   def addChild(newChild: GraphNode): Unit = {
-    val beforeCount = children.size
+    //val beforeCount = children.size
     children += newChild
-    val afterCount = children.size
-    if (afterCount != beforeCount + 1) {
-      throw new IllegalStateException("Set of children of graph node did not grow when adding one element! " +
-        "Does the graph already contain the added child?")
-    }
+    //val afterCount = children.size
+    //if (afterCount != beforeCount + 1) {
+    //  throw new IllegalStateException("Set of children of graph node did not grow when adding one element! " +
+    //    "Does the graph already contain the added child?")
+    //}
   }
 
   def removeChild(remove: GraphNode): Unit = {
@@ -47,19 +51,41 @@ abstract class GraphNode(var varName: String, var varValue: Boolean, var formula
     }
   }
 
+  override def toString: String = "( " + varName + " = " + varValue.toString + " )"
+
+  override def equals(obj: scala.Any): Boolean = {
+    obj match {
+      case graphNode: GraphNode =>
+        graphNode.varName.equals(this.varName) && graphNode.varValue.equals(this.varValue)
+      case _ => false
+    }
+  }
+
+  def recursiveEquals(other: GraphNode): Boolean = {
+    val currentNode = other.varName.equals(this.varName) && other.varValue.equals(this.varValue)
+    val childCount = other.children.size == children.size
+    if (children.nonEmpty) {
+      val thisChildren = children.toSeq.sortWith(_.varName < _.varName)
+      val otherChildren = other.children.toSeq.sortWith(_.varName < _.varName)
+      val zipped = thisChildren.zip(otherChildren)
+      zipped.foldLeft(currentNode && childCount)((acc, z) => acc && z._1.recursiveEquals(z._2))
+    } else {
+      currentNode && childCount
+    }
+  }
 }
 
-case class RootNode(_varName: String,
-                    _varValue: Boolean,
-                    _formula: InternalCNF)
-  extends GraphNode(_varName, _varValue, _formula) {}
+case class RootNode(override var varName: String,
+                    override var varValue: Boolean,
+                    override var formula: InternalCNF)
+  extends GraphNode() {}
 
-case class DecisionLiteral(_varName: String,
-                           _varValue: Boolean,
-                           _formula: InternalCNF)
-  extends GraphNode(_varName, _varValue, _formula) {}
+case class DecisionLiteral(override var varName: String,
+                           override var varValue: Boolean,
+                           override var formula: InternalCNF)
+  extends GraphNode() {}
 
-case class NonDecisionLiteral(_varName: String,
-                              _varValue: Boolean,
-                              _formula: InternalCNF)
-  extends GraphNode(_varName, _varValue, _formula) {}
+case class NonDecisionLiteral(override var varName: String,
+                              override var varValue: Boolean,
+                              override var formula: InternalCNF)
+  extends GraphNode() {}

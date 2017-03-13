@@ -9,46 +9,46 @@ import util._
 class CDCLGraphUtilsTest extends FunSuite {
 
   test("hasConflict") {
-    val graph: RootNode = RootNode("rootNode", _varValue = false, null)
-    graph.addChild(NonDecisionLiteral("a", _varValue = false, null))
+    val graph: RootNode = RootNode("rootNode", varValue = false, null)
+    graph.addChild(NonDecisionLiteral("a", varValue = false, null))
 
-    val b = NonDecisionLiteral("b", _varValue = true, null)
-    b.addChild(NonDecisionLiteral("a", _varValue = true, null))
+    val b = NonDecisionLiteral("b", varValue = true, null)
+    b.addChild(NonDecisionLiteral("a", varValue = true, null))
     graph.addChild(b)
 
     assert(CDCLGraphUtils.hasConflict(graph).get.equals("a"))
   }
 
   test("hasNoConflict") {
-    val graph: RootNode = RootNode("rootNode", _varValue = false, null)
-    graph.addChild(NonDecisionLiteral("a", _varValue = false, null))
+    val graph: RootNode = RootNode("rootNode", varValue = false, null)
+    graph.addChild(NonDecisionLiteral("a", varValue = false, null))
 
-    val b = NonDecisionLiteral("b", _varValue = true, null)
-    b.addChild(NonDecisionLiteral("a", _varValue = false, null))
+    val b = NonDecisionLiteral("b", varValue = true, null)
+    b.addChild(NonDecisionLiteral("a", varValue = false, null))
     graph.addChild(b)
 
     assert(CDCLGraphUtils.hasConflict(graph).isEmpty)
   }
 
   test("relevantDecisionLiterals") {
-    val graph: RootNode = RootNode("rootNode", _varValue = false, null)
+    val graph: RootNode = RootNode("rootNode", varValue = false, null)
 
-    val decisionLiteral1 = DecisionLiteral("a", _varValue = false, null)
-    decisionLiteral1.addChild(NonDecisionLiteral("c", _varValue = false, null))
+    val decisionLiteral1 = DecisionLiteral("a", varValue = false, null)
+    decisionLiteral1.addChild(NonDecisionLiteral("c", varValue = false, null))
     graph.addChild(decisionLiteral1)
 
-    val decisionLiteral2 = DecisionLiteral("b", _varValue = false, null)
+    val decisionLiteral2 = DecisionLiteral("b", varValue = false, null)
     decisionLiteral1.addChild(decisionLiteral2)
 
-    val decisionLiteral3 = DecisionLiteral("d", _varValue = false, null)
-    decisionLiteral3.addChild(NonDecisionLiteral("c", _varValue = true, null))
+    val decisionLiteral3 = DecisionLiteral("d", varValue = false, null)
+    decisionLiteral3.addChild(NonDecisionLiteral("c", varValue = true, null))
     decisionLiteral2.addChild(decisionLiteral3)
 
     val relevantDecisionLiterals = CDCLGraphUtils.relevantDecisionLiterals(graph, "c")
 
     assert(relevantDecisionLiterals.equals(Seq(
-      DecisionLiteral("a", _varValue = false, null),
-      DecisionLiteral("d", _varValue = false, null))))
+      DecisionLiteral("a", varValue = false, null),
+      DecisionLiteral("d", varValue = false, null))))
   }
 
   test("relevantDecisionLiteralsExampleFromSlides") {
@@ -56,8 +56,8 @@ class CDCLGraphUtilsTest extends FunSuite {
     val relevantDecisionLiterals = CDCLGraphUtils.relevantDecisionLiterals(graph, "u")
 
     assert(relevantDecisionLiterals.equals(Seq(
-      DecisionLiteral("p", _varValue = true, null),
-      DecisionLiteral("t", _varValue = true, null))))
+      DecisionLiteral("p", varValue = true, null),
+      DecisionLiteral("t", varValue = true, null))))
   }
 
   test("backJumpExampleFromSlides") {
@@ -65,28 +65,28 @@ class CDCLGraphUtilsTest extends FunSuite {
     val conflictVar = CDCLGraphUtils.hasConflict(graph).get
     val lastNodeAfterBackjump = CDCLGraphUtils.doBackJumping(graph, conflictVar)
 
-    val resultGraph: RootNode = RootNode("rootNode", _varValue = false, null)
-    val n = DecisionLiteral("n", _varValue = true, null)
-    val p = DecisionLiteral("p", _varValue = true, null)
-    val r = NonDecisionLiteral("r", _varValue = true, null)
-    val notT = DecisionLiteral("t", _varValue = false, null)
+    val resultGraph: RootNode = RootNode("rootNode", varValue = false, null)
+    val n = DecisionLiteral("n", varValue = true, null)
+    val p = DecisionLiteral("p", varValue = true, null)
+    val r = NonDecisionLiteral("r", varValue = true, null)
+    val notT = DecisionLiteral("t", varValue = false, null)
 
     resultGraph.addChild(n)
     n.addChild(p)
     p.addChild(r)
     p.addChild(notT)
 
-    assert(graph.equals(resultGraph))
+    assert(graph.recursiveEquals(resultGraph))
     assert(lastNodeAfterBackjump.equals(notT))
   }
 
   test("deleteAllNotDirectlyReachableNonDecisionLiterals") {
-    val graph = RootNode("rootNode", _varValue = true, null)
-    val a = DecisionLiteral("a", _varValue = true, null)
-    val b = NonDecisionLiteral("b", _varValue = true, null)
-    val c = NonDecisionLiteral("c", _varValue = true, null)
-    val d = DecisionLiteral("d", _varValue = true, null)
-    val e = NonDecisionLiteral("e", _varValue = true, null)
+    val graph = RootNode("rootNode", varValue = true, null)
+    val a = DecisionLiteral("a", varValue = true, null)
+    val b = NonDecisionLiteral("b", varValue = true, null)
+    val c = NonDecisionLiteral("c", varValue = true, null)
+    val d = DecisionLiteral("d", varValue = true, null)
+    val e = NonDecisionLiteral("e", varValue = true, null)
 
     graph.addChild(a)
     a.addChild(b)
@@ -96,25 +96,25 @@ class CDCLGraphUtilsTest extends FunSuite {
 
     CDCLGraphUtils.deleteAllNotDirectlyReachableNonDecisionLiterals(graph)
 
-    val expectedResult = RootNode("rootNode", _varValue = true, null)
-    val eA = DecisionLiteral("a", _varValue = true, null)
-    val eB = NonDecisionLiteral("b", _varValue = true, null)
-    val eD = DecisionLiteral("d", _varValue = true, null)
-    val eE = NonDecisionLiteral("e", _varValue = true, null)
+    val expectedResult = RootNode("rootNode", varValue = true, null)
+    val eA = DecisionLiteral("a", varValue = true, null)
+    val eB = NonDecisionLiteral("b", varValue = true, null)
+    val eD = DecisionLiteral("d", varValue = true, null)
+    val eE = NonDecisionLiteral("e", varValue = true, null)
     expectedResult.addChild(eA)
     eA.addChild(eB)
     eA.addChild(eD)
     eD.addChild(eE)
 
-    assert(graph.equals(expectedResult))
+    assert(graph.recursiveEquals(expectedResult))
   }
 
   test("getParentNodes") {
     val graph = exampleGraphFromSlides()
 
-    val notU = NonDecisionLiteral("u", _varValue = false, null)
-    val p = DecisionLiteral("p", _varValue = true, null)
-    val t = DecisionLiteral("t", _varValue = true, null)
+    val notU = NonDecisionLiteral("u", varValue = false, null)
+    val p = DecisionLiteral("p", varValue = true, null)
+    val t = DecisionLiteral("t", varValue = true, null)
 
     val parents = CDCLGraphUtils.getParentNodes(graph, notU)
 
@@ -140,15 +140,15 @@ class CDCLGraphUtilsTest extends FunSuite {
   }
 
   def exampleGraphFromSlides(): RootNode = {
-    val graph: RootNode = RootNode("rootNode", _varValue = false, null)
-    val n = DecisionLiteral("n", _varValue = true, null)
-    val p = DecisionLiteral("p", _varValue = true, null)
-    val r = NonDecisionLiteral("r", _varValue = true, null)
-    val notS = DecisionLiteral("s", _varValue = false, null)
-    val q = NonDecisionLiteral("q", _varValue = true, null)
-    val t = DecisionLiteral("t", _varValue = true, null)
-    val u = NonDecisionLiteral("u", _varValue = true, null)
-    val notU = NonDecisionLiteral("u", _varValue = false, null)
+    val graph: RootNode = RootNode("rootNode", varValue = false, null)
+    val n = DecisionLiteral("n", varValue = true, null)
+    val p = DecisionLiteral("p", varValue = true, null)
+    val r = NonDecisionLiteral("r", varValue = true, null)
+    val notS = DecisionLiteral("s", varValue = false, null)
+    val q = NonDecisionLiteral("q", varValue = true, null)
+    val t = DecisionLiteral("t", varValue = true, null)
+    val u = NonDecisionLiteral("u", varValue = true, null)
+    val notU = NonDecisionLiteral("u", varValue = false, null)
 
     graph.addChild(n)
     n.addChild(p)

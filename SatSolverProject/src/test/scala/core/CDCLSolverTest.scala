@@ -29,7 +29,7 @@ class CDCLSolverTest extends FunSuite {
     * Create as many tests as there are files in the specified folder.
     */
   for (f <- getListOfSmt2Files(folder)) {
-    test("dp_solver_" + f) {
+    test("cdcl_solver_" + f) {
       val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
       assert(SolverValidator.solveFormulaAndValidate(formula, CDCLSolver))
     }
