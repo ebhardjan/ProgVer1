@@ -8,8 +8,6 @@ import util._
   */
 object CDCLSolver extends SATSolvingAlgorithm {
 
-  var firstDecisionLiteral: InternalLiteral = _
-
   /**
     * Applies the CDCL algorithm to the given formula. Returns None in case of unsat, otherwise the model mapping
     * variables to booleans.
@@ -95,12 +93,6 @@ object CDCLSolver extends SATSolvingAlgorithm {
 
         newLastNode = CDCLGraphUtils.doBackJumping(graph, name)
 
-        if (newLastNode.varName.equals(firstDecisionLiteral.name) &&
-          newLastNode.varValue.equals(!firstDecisionLiteral.polarity)){
-          // we have UNSAT
-          return false
-        }
-
         CDCLGraphUtils.addClauseToAllFormulas(graph, learnedClause)
         runCDCL(graph, newLastNode)
       case None =>
@@ -148,10 +140,6 @@ object CDCLSolver extends SATSolvingAlgorithm {
 
     // for now just pick the first literal
     val decisionLiteral = decisionLiterals.head.literal
-
-    if (firstDecisionLiteral == null) {
-      firstDecisionLiteral = decisionLiteral
-    }
 
     Some(decisionLiteral)
   }
