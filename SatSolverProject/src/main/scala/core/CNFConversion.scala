@@ -22,8 +22,8 @@ object CNFConversion {
   def replaceImplication(formula: Term): Term = {
     formula match {
       case Not(f) => Not(replaceImplication(f))
-      case Or(disjuncts@_*) => Or(disjuncts.map(d => replaceImplication(d)))
-      case And(conjuncts@_*) => And(conjuncts.map(c => replaceImplication(c)))
+      case Or(disjuncts@_*) => SmtlibUtils.newOrOrSingleLiteral(disjuncts.map(d => replaceImplication(d)))
+      case And(conjuncts@_*) => SmtlibUtils.newAndOrSingleLiteral(conjuncts.map(c => replaceImplication(c)))
       case Implies(f, g) => Or(Not(replaceImplication(f)), replaceImplication(g))
       case Equals(f, g) =>
         // let's evaluate the subexpressions first, otherwise they get evaluated twice
@@ -42,11 +42,11 @@ object CNFConversion {
       case Not(True()) => False()
       case Not(False()) => True()
       case Not(Not(f)) => pushDownNegations(f)
-      case Not(And(conjuncts@_*)) => Or(conjuncts.map(c => pushDownNegations(Not(c))))
-      case Not(Or(disjuncts@_*)) => And(disjuncts.map(d => pushDownNegations(Not(d))))
+      case Not(And(conjuncts@_*)) => SmtlibUtils.newOrOrSingleLiteral(conjuncts.map(c => pushDownNegations(Not(c))))
+      case Not(Or(disjuncts@_*)) => SmtlibUtils.newAndOrSingleLiteral(disjuncts.map(d => pushDownNegations(Not(d))))
       case Not(f) => Not(pushDownNegations(f))
-      case Or(disjuncts@_*) => Or(disjuncts.map(d => pushDownNegations(d)))
-      case And(conjuncts@_*) => And(conjuncts.map(c => pushDownNegations(c)))
+      case Or(disjuncts@_*) => SmtlibUtils.newOrOrSingleLiteral(disjuncts.map(d => pushDownNegations(d)))
+      case And(conjuncts@_*) => SmtlibUtils.newAndOrSingleLiteral(conjuncts.map(c => pushDownNegations(c)))
       case Implies(_, _) | Equals(_, _) =>
         throw new IllegalStateException(Utils.methodName + ": Found implication! Remove implications first!")
       case _ => formula
@@ -105,7 +105,7 @@ object CNFConversion {
   def distributeConjunctionsOverDisjunctions(formula: Term): Term = {
     formula match {
       case Not(f) => Not(distributeConjunctionsOverDisjunctions(f))
-      case And(conjuncts@_*) => flatten(And(conjuncts.map(c => distributeConjunctionsOverDisjunctions(c))))
+      case And(conjuncts@_*) => flatten(SmtlibUtils.newAndOrSingleLiteral(conjuncts.map(c => distributeConjunctionsOverDisjunctions(c))))
       case Or(disjuncts@_*) =>
         // recurse first
         val processedDisjuncts = disjuncts.map(d => distributeConjunctionsOverDisjunctions(d))
@@ -120,9 +120,9 @@ object CNFConversion {
         val pureDisjuncts = processedDisjuncts.filter(p => !disjunctConjuncts.contains(p)).toList
         if (conjuncts.nonEmpty) {
           val conjunctsCombination = Combinatorial.calcCombinations[Term](conjuncts)
-          flatten(And(conjunctsCombination.map(c => Or(pureDisjuncts ++ c))))
+          flatten(SmtlibUtils.newAndOrSingleLiteral(conjunctsCombination.map(c => SmtlibUtils.newOrOrSingleLiteral(pureDisjuncts ++ c))))
         } else {
-          flatten(Or(processedDisjuncts))
+          flatten(SmtlibUtils.newOrOrSingleLiteral(processedDisjuncts))
         }
       case Implies(_, _) | Equals(_, _) =>
         throw new IllegalStateException(Utils.methodName + ": Found implication! Remove implications first!")
@@ -143,7 +143,7 @@ object CNFConversion {
           case And(innerConjuncts@_*) => innerConjuncts
           case c => List(c)
         }
-        And(unwrappedConjuncts)
+        SmtlibUtils.newAndOrSingleLiteral(unwrappedConjuncts)
       case Or(disjuncts@_*) =>
         // recurse first:
         val processedDisjuncts = disjuncts.map(c => flatten(c))
@@ -151,7 +151,7 @@ object CNFConversion {
           case Or(innerDisjuncts@_*) => innerDisjuncts
           case c => List(c)
         }
-        Or(unwrappedDisjuncts)
+        SmtlibUtils.newOrOrSingleLiteral(unwrappedDisjuncts)
       case _ => formula
     }
   }
