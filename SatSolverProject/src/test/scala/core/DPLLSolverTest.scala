@@ -31,7 +31,8 @@ class DPLLSolverTest extends FunSuite {
   for (f <- getListOfSmt2Files(folder)) {
     test("dpll_solver_" + f) {
       val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
-      assert(SolverValidator.solveFormulaAndValidate(formula, DPLLSolver))
+      val dPLLSolver = new DPLLSolver
+      assert(SolverValidator.solveFormulaAndValidate(formula, dPLLSolver))
     }
   }
 
@@ -43,6 +44,7 @@ class DPLLSolverTest extends FunSuite {
     val testNr = "07"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
-    assert(SolverValidator.solveFormulaAndValidate(formula, DPLLSolver))
+    val dPLLSolver = new DPLLSolver
+    assert(SolverValidator.solveFormulaAndValidate(formula, dPLLSolver))
   }
 }
