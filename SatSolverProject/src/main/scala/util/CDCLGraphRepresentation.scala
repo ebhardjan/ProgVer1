@@ -5,6 +5,12 @@ package util
   *
   * Graph representation used in the CDCL algorithm.
   */
+
+/**
+  * Abstract base class for any graph node.
+  *
+  * Implements some important functionality such as adding and removing children and converting to a model.
+  */
 abstract class GraphNode() {
 
   var varName: String
@@ -13,16 +19,20 @@ abstract class GraphNode() {
 
   var children: Set[GraphNode] = Set()
 
+  /**
+    * adds the given child to the graph
+    *
+    * @param newChild the child to add
+    */
   def addChild(newChild: GraphNode): Unit = {
-    //val beforeCount = children.size
     children += newChild
-    //val afterCount = children.size
-    //if (afterCount != beforeCount + 1) {
-    //  throw new IllegalStateException("Set of children of graph node did not grow when adding one element! " +
-    //    "Does the graph already contain the added child?")
-    //}
   }
 
+  /**
+    * removes the given child from the graph
+    *
+    * @param remove the child to be removed
+    */
   def removeChild(remove: GraphNode): Unit = {
     val beforeCount = children.size
     children -= remove
@@ -33,14 +43,11 @@ abstract class GraphNode() {
     }
   }
 
-  def toMap: Map[String, Boolean] = {
-    this match {
-      case RootNode(_, _, _) => Map()
-      case NonDecisionLiteral(vN, vV, _) => Map(vN -> vV)
-      case DecisionLiteral(vN, vV, _) => Map(vN -> vV)
-    }
-  }
-
+  /**
+    * Converts the graph into a model.
+    *
+    * @return map of variable names to variable values (true or false)
+    */
   def toModel: Map[String, Boolean] = {
     if (children.isEmpty) {
       this.toMap
@@ -48,6 +55,14 @@ abstract class GraphNode() {
       children
         .map(child => child.toModel)
         .reduceLeft((a, b) => a ++ b) ++ this.toMap
+    }
+  }
+
+  private[this] def toMap: Map[String, Boolean] = {
+    this match {
+      case RootNode(_, _, _) => Map()
+      case NonDecisionLiteral(vN, vV, _) => Map(vN -> vV)
+      case DecisionLiteral(vN, vV, _) => Map(vN -> vV)
     }
   }
 
@@ -61,6 +76,11 @@ abstract class GraphNode() {
     }
   }
 
+  /**
+    * equals method not just on the graph node but on the whole graph (all children are equals as well)
+    *
+    * useful for testing...
+    */
   def recursiveEquals(other: GraphNode): Boolean = {
     val currentNode = other.varName.equals(this.varName) && other.varValue.equals(this.varValue)
     val childCount = other.children.size == children.size

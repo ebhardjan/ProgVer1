@@ -8,20 +8,26 @@ package util
 object CDCLGraphUtils {
 
   /**
-    * Returns true if the given graph has a conflict
+    * Check if a given graph has a conflict
+    *
+    * @param graph the root node of the graph
+    * @return Optional with String containing the name of the conflict variable or empty optional
     */
   def hasConflict(graph: RootNode): Option[String] = {
     var model: Map[String, Boolean] = Map()
 
-    def internalHasConflict(graph: GraphNode): Option[String] = {
+    def _internalHasConflict(graph: GraphNode): Option[String] = {
+      // Check the existing model. If there is a variable and it's negation in the graph we have a conflict.
       if (model.contains(graph.varName) && model(graph.varName) != graph.varValue) {
+        // if we found the conflict return it
         Some(graph.varName)
       } else {
+        // otherwise add the variable value of the current node to the graph and recurse
         model = model + (graph.varName -> graph.varValue)
         if (graph.children.isEmpty) {
           None
         } else {
-          val conflicts = graph.children.map(c => internalHasConflict(c)).collect({ case Some(s) => s })
+          val conflicts = graph.children.map(c => _internalHasConflict(c)).collect({ case Some(s) => s })
           if (conflicts.size == 1) {
             Some(conflicts.head)
           } else if (conflicts.size > 1) {
@@ -33,11 +39,15 @@ object CDCLGraphUtils {
       }
     }
 
-    internalHasConflict(graph)
+    _internalHasConflict(graph)
   }
 
   /**
     * Returns a sequence of relevant decision literals in the order they appear in the graph
+    *
+    * @param graph           graph node from where to start the search
+    * @param conflictVarName variable of which we want to find the relevant decision literals
+    * @return list of relevant decision literals
     */
   def relevantDecisionLiterals(graph: GraphNode, conflictVarName: String): Seq[DecisionLiteral] = {
     graph match {
@@ -55,26 +65,34 @@ object CDCLGraphUtils {
     }
   }
 
+  /**
+    * helper function that returns whether a given decision literal can reach a conflict via only NonDecision literals
+    */
   private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictVarName: String): Boolean = {
-    def reaches(node: GraphNode): Boolean = {
+    def _reaches(node: GraphNode): Boolean = {
       node.children.foldLeft(false)(
         (b, c) => c match {
           case NonDecisionLiteral(varName, _, _) =>
             if (conflictVarName.equals(varName)) {
               return true
             } else {
-              return b || reaches(c)
+              return b || _reaches(c)
             }
           case _ => false
         }
       )
     }
 
-    reaches(node)
+    _reaches(node)
   }
 
   /**
-    * Does the back-jumping on the graph
+    * Does the back-jumping on the graph as defined in the lecture slides.
+    * Side effect: the graph is changed.
+    *
+    * @param graph              root node of the graph
+    * @param conflictingVarName name of the variable that has a conflict
+    * @return Newly added node. Where we want to proceed from in the next steps.
     */
   def doBackJumping(graph: RootNode, conflictingVarName: String): GraphNode = {
     val relevantLiterals = relevantDecisionLiterals(graph, conflictingVarName)
@@ -105,8 +123,11 @@ object CDCLGraphUtils {
     newDecisionLiteral
   }
 
-  private[this] def findFirstDecisionLiteralChild(graph: GraphNode): DecisionLiteral = {
-    val nextDecisionLiteralSet = graph.children.filter(c => c.isInstanceOf[DecisionLiteral])
+  /**
+    * helper method that returns the first direct child that is a decision literal
+    */
+  private[this] def findFirstDecisionLiteralChild(node: GraphNode): DecisionLiteral = {
+    val nextDecisionLiteralSet = node.children.filter(c => c.isInstanceOf[DecisionLiteral])
     if (nextDecisionLiteralSet.size > 1) {
       throw new IllegalStateException("Graph contains DecisionLiteral that has more than one DecisionLiteral as " +
         "children")
@@ -117,6 +138,11 @@ object CDCLGraphUtils {
     }
   }
 
+  /**
+    * deletes all direct and indirect children that are decision literals
+    *
+    * @param parentOfDecisionLiteral parent node of the first decision literal that will be deleted
+    */
   private[this] def deleteAllDecisionLiteralsStartingWithChildOf(parentOfDecisionLiteral: GraphNode): Unit = {
     val nextDecisionLiteral = findFirstDecisionLiteralChild(parentOfDecisionLiteral)
     if (nextDecisionLiteral != null) {
@@ -125,6 +151,9 @@ object CDCLGraphUtils {
     }
   }
 
+  /**
+    * deletes the literals that are part of a conflict in a given graph
+    */
   private[this] def deleteConflictingLiteral(graph: GraphNode, conflictVarName: String): Unit = {
     graph.children.foreach(c =>
       if (c.varName.equals(conflictVarName)) {
@@ -134,29 +163,32 @@ object CDCLGraphUtils {
       })
   }
 
-  def deleteAllNotDirectlyReachableNonDecisionLiterals(graph: GraphNode): Unit = {
+  /**
+    * deletes all non-decision literals in a graph that are not directly reachable by a decision literal
+    */
+  def deleteAllNotDirectlyReachableNonDecisionLiterals(graph: RootNode): Unit = {
     var reachable: Set[NonDecisionLiteral] = Set()
 
-    def traverseGraphAndAddToReachable(graph: GraphNode): Unit = {
+    def _traverseGraphAndAddToReachable(graph: GraphNode): Unit = {
       graph match {
         case g: NonDecisionLiteral => reachable += g
-        case _ => graph.children.foreach(c => traverseGraphAndAddToReachable(c))
+        case _ => graph.children.foreach(c => _traverseGraphAndAddToReachable(c))
       }
     }
 
-    def deleteAllElementsNotInReachable(graph: GraphNode): Unit = {
+    def _deleteAllElementsNotInReachable(graph: GraphNode): Unit = {
       graph.children.foreach {
         case child: NonDecisionLiteral =>
           if (!reachable.contains(child)) {
             graph.removeChild(child)
           }
-          deleteAllElementsNotInReachable(child)
-        case child: Any => deleteAllElementsNotInReachable(child)
+          _deleteAllElementsNotInReachable(child)
+        case child: Any => _deleteAllElementsNotInReachable(child)
       }
     }
 
-    traverseGraphAndAddToReachable(graph)
-    deleteAllElementsNotInReachable(graph)
+    _traverseGraphAndAddToReachable(graph)
+    _deleteAllElementsNotInReachable(graph)
   }
 
 
@@ -205,10 +237,10 @@ object CDCLGraphUtils {
       Some(graph)
     } else {
       if (graph.children.nonEmpty) {
-        val res = graph.children.map(c => findNode(c, needle)).collect({case Some(n) => n})
+        val res = graph.children.map(c => findNode(c, needle)).collect({ case Some(n) => n })
         if (res.size > 1) {
           throw new IllegalStateException("Graph contains the same element multiple times!")
-        } else if(res.size == 1) {
+        } else if (res.size == 1) {
           Some(res.iterator.next)
         } else {
           None

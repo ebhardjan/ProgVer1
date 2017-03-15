@@ -103,13 +103,16 @@ object CDCLSolver extends SATSolvingAlgorithm {
           pickDecisionLiteral(newLastNode.formula) match {
             case Some(decisionLiteral) =>
               // remove all the clauses that contain the literal
-              val updatedClauses = SolverUtils.takeClausesNotContainingLiteral(newLastNode.formula.conjuncts, decisionLiteral)
+              val updatedClauses =
+                SolverUtils.takeClausesNotContainingLiteral(newLastNode.formula.conjuncts, decisionLiteral)
               // remove the negation of the literal from all clauses
-              val updatedFormula = InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
+              val updatedFormula =
+                InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
               val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
               newLastNode.addChild(newNode)
               runCDCL(graph, newNode)
             case None =>
+              // no more literals left to pick from -> UNSAT
               false
           }
         }
@@ -127,21 +130,21 @@ object CDCLSolver extends SATSolvingAlgorithm {
     }
   }
 
-
   /**
-    * Pick the next decision literal
+    * Pick the next decision literal.
+    *
+    * @return optional containing a decision literal or empty optional in case we cannot pick a new decision literal
+    *         because there are no more literals to choose from left
     */
   private[this] def pickDecisionLiteral(formula: InternalCNF): Option[InternalLiteral] = {
-    val decisionLiterals = formula.conjuncts.head.disjuncts.filter(d => d.isActive)
+    val possibleDecisionLiterals = formula.conjuncts.head.disjuncts.filter(d => d.isActive)
 
-    if (decisionLiterals.isEmpty) {
-      return None
+    if (possibleDecisionLiterals.isEmpty) {
+      None
+    } else {
+      Some(possibleDecisionLiterals.head.literal)
     }
 
-    // for now just pick the first literal
-    val decisionLiteral = decisionLiterals.head.literal
-
-    Some(decisionLiteral)
   }
 
 }
