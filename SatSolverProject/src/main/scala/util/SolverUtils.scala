@@ -87,11 +87,11 @@ object SolverUtils {
     */
   def takeClausesNotContainingLiteral(set: Set[InternalClause], literal: InternalLiteral)
   : Set[InternalClause] = {
-    for (clause <- set if {
-      (for (disjunct @ InternalDisjunct(InternalLiteral(pol, varName), isActive) <- clause.disjuncts if {
-        varName == literal.name && pol == literal.polarity && isActive
-      }) yield disjunct).isEmpty
-    }) yield clause
+    set
+      .filter(c => !c.disjuncts.exists(d => d.isActive
+        && d.literal.name == literal.name
+        && d.literal.polarity == literal.polarity))
+      .map(c => c.clone())
   }
 
   /**

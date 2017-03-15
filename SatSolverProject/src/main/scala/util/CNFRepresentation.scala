@@ -22,6 +22,10 @@ case class InternalDisjunct(literal: InternalLiteral, var isActive : Boolean) {
 
   // returns the set of variable names occurring positively/negatively (according to b)
   def vars(b: Boolean) : Set[String] = if (isActive) literal.vars(b) else Set()
+
+  override def clone(): InternalDisjunct = {
+    InternalDisjunct(literal, isActive)
+  }
 }
 
 case class InternalClause(disjuncts : Set[InternalDisjunct]) {
@@ -29,6 +33,11 @@ case class InternalClause(disjuncts : Set[InternalDisjunct]) {
 
   // returns the set of variable names occurring positively/negatively (according to b)
   def vars(b: Boolean) : Set[String] = disjuncts.foldLeft[Set[String]](Set())((set,d) => set union d.vars(b))
+
+  override def clone(): InternalClause = {
+    InternalClause(disjuncts.map(d => d.clone()))
+  }
+
 }
 
 case class InternalCNF(conjuncts : Set[InternalClause]) {

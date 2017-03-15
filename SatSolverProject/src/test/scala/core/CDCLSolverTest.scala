@@ -31,7 +31,7 @@ class CDCLSolverTest extends FunSuite {
   for (f <- getListOfSmt2Files(folder)) {
     test("cdcl_solver_" + f) {
       val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
-      assert(SolverValidator.solveFormulaAndValidate(formula, CDCLSolver))
+      assert(SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver))
     }
   }
 
@@ -40,9 +40,9 @@ class CDCLSolverTest extends FunSuite {
     */
   test("dummy_test") {
     // paste number of failing test here to debug manually
-    val testNr = "01"
+    val testNr = "11"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
-    assert(SolverValidator.solveFormulaAndValidate(formula, CDCLSolver))
+    assert(SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver))
   }
 }
