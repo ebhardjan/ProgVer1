@@ -11,7 +11,6 @@ import scala.collection.mutable
   * Solve the SAT problem given a formula using the DPLL algorithm.
   */
 class DPLLSolver extends SATSolvingAlgorithm {
-  val varOccurrenceMap: mutable.Map[String, Int] = mutable.Map()
 
   /**
     * Applies the DPLL algorithm to the given formula. Returns None in case of unsat, otherwise the model mapping
@@ -19,7 +18,6 @@ class DPLLSolver extends SATSolvingAlgorithm {
     */
   override def checkSAT(formula: Term): Option[Map[String,Boolean]] = {
     val cnfRep: InternalCNF = CNFRepresentation.convertCNFToInternal(formula)
-//    fillOccurrenceMap(cnfRep)
     val model: Map[String,Boolean] = Map()
     checkSAT(cnfRep, model) match {
       case None => None
@@ -42,13 +40,11 @@ class DPLLSolver extends SATSolvingAlgorithm {
     }
     applyUnitPropagation(formula, model) match {
       case Some((f, r)) =>
-//        varOccurrenceMap.remove(r._1)
         return checkSAT(f, model + r)
       case None =>
     }
 //    applyPureLiteralRule(formula, model) match {
 //      case Some((f, r)) =>
-//        varOccurrenceMap.remove(r._1)
 //        return checkSAT(f, model + r)
 //      case None =>
 //    }
@@ -67,8 +63,6 @@ class DPLLSolver extends SATSolvingAlgorithm {
         InternalLiteral(false, victim)
       )
     )
-//    varOccurrenceMap.clear()
-//    fillOccurrenceMap(chooseFalseFormula)
     checkSAT(chooseTrueFormula, model + (victim -> true)) match {
       case Some(m) => Some(m)
       case None =>
@@ -78,8 +72,6 @@ class DPLLSolver extends SATSolvingAlgorithm {
             InternalLiteral(true, victim)
           )
         )
-//        varOccurrenceMap.clear()
-//        fillOccurrenceMap(chooseFalseFormula)
         checkSAT(chooseFalseFormula, model + (victim -> false))
     }
   }
@@ -89,10 +81,14 @@ class DPLLSolver extends SATSolvingAlgorithm {
     */
   def pickVictim(formula: InternalCNF): String = {
     formula.conjuncts.head.disjuncts.head.literal.name
-//    varOccurrenceMap.head._1
+//    pickMostOccurringVictim(formula)
   }
 
-  def fillOccurrenceMap(formula: InternalCNF): Unit = {
+  /**
+    * Find the literal which occurs most often in the formula.
+    */
+  def pickMostOccurringVictim(formula: InternalCNF): String = {
+    val varOccurrenceMap: mutable.Map[String, Int] = mutable.Map()
     for (c <- formula.conjuncts) {
       for (d <- c.disjuncts; l = d.literal) {
         varOccurrenceMap.getOrElse(l.name, None) match {
@@ -101,6 +97,6 @@ class DPLLSolver extends SATSolvingAlgorithm {
         }
       }
     }
-    varOccurrenceMap.toSeq.sortBy(-_._2)
+    varOccurrenceMap.toSeq.sortBy(-_._2).head._1
   }
 }
