@@ -10,7 +10,7 @@ import scala.collection.immutable.Set
   *
   * Solve the SAT problem given a formula using the Davis-Putnam algorithm.
   */
-object DPSolver extends SATSolvingAlgorithm {
+class DPSolver extends SATSolvingAlgorithm {
 
   /**
     * Store clauses removed from formula by resolution rule together with the variable name which was the target of the

@@ -33,7 +33,7 @@ class DPSolverPreviouslyFailingTest extends FunSuite {
   for (f <- getListOfSmt2Files(folder)) {
     test("previouslyFailing_" + f) {
       val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
-      assert(SolverValidator.solveFormulaAndValidate(formula, DPSolver))
+      assert(SolverValidator.solveFormulaAndValidate(formula, new DPSolver))
     }
   }
 
@@ -45,6 +45,6 @@ class DPSolverPreviouslyFailingTest extends FunSuite {
     val uuid = "306ac934-58f6-42c8-935d-4ea6321f1fe0"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, uuid)
-    assert(SolverValidator.solveFormulaAndValidate(formula, DPSolver))
+    assert(SolverValidator.solveFormulaAndValidate(formula, new DPSolver))
   }
 }

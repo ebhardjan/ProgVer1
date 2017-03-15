@@ -26,7 +26,7 @@ class DPSolverRandomTest extends FunSuite {
   for (i <- 1 to numberOfRandomFormulas) {
     test("newRandomFormula_" + i) {
       val formula = CNFConversion.toCNF(generator.generateRandomFormula())
-      val correct = SolverValidator.solveFormulaAndValidate(formula, DPSolver)
+      val correct = SolverValidator.solveFormulaAndValidate(formula, new DPSolver)
       if (!correct && storeFailedFormulas) {
         // write formula to file
         CNFConversionTestUtils.writeFormulaToSmt2File(formula,
