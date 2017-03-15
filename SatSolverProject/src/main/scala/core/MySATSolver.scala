@@ -2,7 +2,7 @@ package core
 
 import CNF2SMTLIB.CNF2SMTLIBv2Converter
 import smtlib.parser.Commands._
-import util.PropositionalLogic
+import util.{PropositionalLogic, Utils}
 
 // A Scala "object" is a singleton object. Here, we merely use it to hold, in the Java-sense, static methods,
 // by declaring them inside the object.
@@ -55,16 +55,11 @@ object MySATSolver {
 
     // the real work should start here!
 
-    // e.g. (if you implemented a DP SAT Solver as a DPSolver class):
-    // val CNFInput = CNFConversion.toCNF(formula)
-    // val DP = new DPSolver()
-    // val res = DP.checkSAT(CNFInput)
-    // println(DP.outputResult(res))
-
-    // might be useful for initial debugging:
-    println("Declarations: \n" + declarations)
-    println("Input Formula: " + formula)
-    println("CNF Formula : " + CNFConversion.toCNF(formula))
+    val CNFInput = CNFConversion.toCNF(formula)
+//    val res = DPSolver.checkSAT(CNFInput)
+    val dPLLSolver = new DPLLSolver
+    val res = Utils.time(dPLLSolver.checkSAT(CNFInput))
+    println(DPSolver.outputResult(res))
   }
 
 
