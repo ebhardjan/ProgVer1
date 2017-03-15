@@ -8,58 +8,61 @@ import util.{PropositionalLogic, Utils}
 // by declaring them inside the object.
 object MySATSolver {
 
-  // This is a Scala method declaration: it declares a method with a single argument and no return value (void in Java)
   def main(args: Array[String]) {
     // check that a command-line argument was passed (which will be treated as the input String)
-
-    // You will need to extend the command-line handling code during your project
-    if(args.length == 0) {
-      abortExecution("No input file specified.")
+    if(args.length == 0 || args.length > 3) {
+      abortExecution("Invalid arguments. Need 1 to 3 arguments:\n" +
+        "[/cnf]: add this if the file is in .cnf format\n" +
+        "<file>: path to the file containing the formula to check (in .smt2 or .cnf format)\n" +
+        "[/dp][/dpll][/cdcl]: add one of those to specify the algorithm to be used in solving.")
     }
 
-    if(args.length > 2) {
-      abortExecution("Too many command-line arguments specified (expected 1 or 2)")
-    }
-
-    if(args.length == 2 && args(0) != "/cnf") {
-      abortExecution(s"Unexpected command-line arguments: expected filename or /cnf filename, got: ${args(0)} ${args(1)}")
-    }
-
-    // "val" indicates immutable storage; we will never reassign inputString
-    val inputString = // we can use a block of statements as an expression; its value will be the value of the last statement in the block
-    {
-      if(args.length == 1) {
+    val inputString = {
+      if(args(0) == "/cnf") {
+        convertDIMACSFileToSMTLIBv2(args(1))
+      } else { // convert from .cnf (DIMACS) format
         // This pattern is typical for reading an entire text file into a String
         val source = scala.io.Source.fromFile(args(0))
         try source.mkString finally source.close() // make sure the file is closed
-      } else { // convert from .cnf (DIMACS) format
-        convertDIMACSFileToSMTLIBv2(args(1))
       }
     }
 
-    // type annotations on declarations (such as "List[Command]" here) are optional; the compiler will otherwise try to infer a type from the assigned right-hand-side expression
-    // However, it might not always choose the type you expect, and sometimes adding the types explicitly can make code more readable.
     val script: List[Command] = parseInputString(inputString)
 
-    // we can declare and assign pairs / tuples in Scala, rather than declaring each element separately
-    val (declarations, formula) = util.InputProcessing.processCommands(script) // extract the list of identifiers and input formula from the list of smtlib commands
+    // extract the list of identifiers and input formula from the list of smtlib commands
+    val (declarations, formula) = util.InputProcessing.processCommands(script)
 
-    // Now, we have the list of function declarations (corresponding to the variables in the input problem), and the formula to check for satisfiability
+    // Now, we have the list of function declarations (corresponding to the variables in the input problem),
+    // and the formula to check for satisfiability
 
-    // A runtime check: if the first parameter isn't true, the execution aborts with the (optional) second parameter as the exception message
     // The message is formatted using string interpolation (requires strings of the shape s"...").
     // To splice the result of a more complex Scala expression into a string, surround it with curly braces, e.g. s"1 > ${1 + 1}".
     assert(PropositionalLogic.isPropositional(formula),
            s"The parsed formula is not a propositional formula; got: $formula")
 
-
-    // the real work should start here!
-
     val CNFInput = CNFConversion.toCNF(formula)
-//    val res = DPSolver.checkSAT(CNFInput)
-    val dPLLSolver = new DPLLSolver
-    val res = Utils.time(dPLLSolver.checkSAT(CNFInput))
-    println(DPSolver.outputResult(res))
+
+    // Pick algorithm specified in input
+    // use DPLL as default
+    val defaultAlgo = "/dpll"
+    val algoString = {
+      args.length match {
+        case 1 => defaultAlgo
+        case 2 => if (args(0) != "/cnf") args(1) else defaultAlgo
+        case 3 => args(2)
+      }
+    }
+    val solver: SATSolvingAlgorithm = {
+      algoString match {
+        case "/dp" => new DPSolver
+        case "/dpll" => new DPLLSolver
+        case _ => abortExecution(s"Invalid algorithm selection: $algoString")
+      }
+    }
+
+    // do the sat checking and print result
+    val res = Utils.time(solver.checkSAT(CNFInput))
+    println(solver.outputResult(res))
   }
 
 
