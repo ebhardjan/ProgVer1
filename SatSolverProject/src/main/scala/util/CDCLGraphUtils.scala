@@ -65,25 +65,34 @@ object CDCLGraphUtils {
     }
   }
 
+  def decisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
+    graph match {
+      case DecisionLiteral(_, _, _ ) => graph.children
+        .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s,c) => s ++: decisionLiterals(c))
+      case RootNode(_, _, _) => graph.children
+          .foldLeft[Seq[DecisionLiteral]](Seq())((s,c) => s ++: decisionLiterals(c))
+      case _ => Seq()
+    }
+  }
+
   /**
     * helper function that returns whether a given decision literal can reach a conflict via only NonDecision literals
     */
   private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictVarName: String): Boolean = {
-    def _reaches(node: GraphNode): Boolean = {
-      node.children.foldLeft(false)(
-        (b, c) => c match {
-          case NonDecisionLiteral(varName, _, _) =>
-            if (conflictVarName.equals(varName)) {
-              return true
-            } else {
-              return b || _reaches(c)
-            }
-          case _ => false
-        }
-      )
+    /*
+    def _reaches(node: GraphNode, allowDecisionLiteral: Boolean): Boolean = {
+      if (conflictVarName.equals(node.varName)) {
+        true
+      } else {
+        node.children
+          .filter(c => c.isInstanceOf[NonDecisionLiteral] || allowDecisionLiteral)
+          .foldLeft(false)((acc, c) => acc || _reaches(c, allowDecisionLiteral = false))
+      }
     }
+    */
 
-    _reaches(node)
+    //_reaches(node, allowDecisionLiteral = true)
+    node.children.exists(n => conflictVarName.equals(n.varName))
   }
 
   /**

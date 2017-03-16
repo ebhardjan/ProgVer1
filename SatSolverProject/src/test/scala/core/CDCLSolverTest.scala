@@ -40,7 +40,7 @@ class CDCLSolverTest extends FunSuite {
     */
   test("dummy_test") {
     // paste number of failing test here to debug manually
-    val testNr = "11"
+    val testNr = "12"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
     assert(SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver))

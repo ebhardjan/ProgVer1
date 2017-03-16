@@ -53,17 +53,18 @@ class CDCLSolver extends SATSolvingAlgorithm {
     * @param root     the root node of the graph
     * @param lastNode the last added node, this is where the children will be added
     */
-  def runToComplete(root: RootNode, lastNode: GraphNode): GraphNode = {
+  def runToComplete(root: RootNode, lastNode: GraphNode): Unit = {
     if (CDCLGraphUtils.hasConflict(root).isDefined) {
-      return lastNode
+      return
     }
     if (lastNode.formula.conjuncts.isEmpty) {
-      return lastNode
+      return
     }
     removeTautologies(lastNode.formula, root.toModel) match {
       case Some(f) =>
         lastNode.formula = f
-        return runToComplete(root, lastNode)
+        runToComplete(root, lastNode)
+        return
       case None =>
     }
     applyUnitPropagation(lastNode.formula) match {
@@ -82,30 +83,31 @@ class CDCLSolver extends SATSolvingAlgorithm {
         }
         digestUnitPropagation(root, f, r, unitClause)
         lastNode.formula = f
-        return runToComplete(root, lastNode)
+        runToComplete(root, lastNode)
       case None =>
     }
+    /* TODO should we bother about this one?
     applyPureLiteralRule(lastNode.formula, root.toModel) match {
       case Some((f, r)) =>
         val newNode = NonDecisionLiteral(r._1, r._2, f)
         lastNode.addChild(newNode)
-        return runToComplete(root, newNode)
+        lastNode.formula = f
+        runToComplete(root, lastNode)
       case None =>
-    }
-    lastNode
+      */
   }
 
   /**
     * Recursively apply the CDCL steps until the SAT question is answered.
     */
   def runCDCL(graph: RootNode, lastNode: GraphNode): Boolean = {
-    var newLastNode = runToComplete(graph, lastNode)
+    runToComplete(graph, lastNode)
     val conflictVarName = CDCLGraphUtils.hasConflict(graph)
     conflictVarName match {
       case Some(name) =>
         val learnedClause = CDCLGraphUtils.learnClause(graph, name)
 
-        newLastNode = CDCLGraphUtils.doBackJumping(graph, name)
+        val newLastNode = CDCLGraphUtils.doBackJumping(graph, name)
         CDCLGraphUtils.addClauseToAllFormulas(graph, learnedClause)
 
         // TODO remove this duplicate code!
@@ -124,28 +126,22 @@ class CDCLSolver extends SATSolvingAlgorithm {
           runCDCL(graph, newLastNode)
         }
       case None =>
-        if (newLastNode.formula.conjuncts.isEmpty) {
+        if (lastNode.formula.conjuncts.isEmpty) {
           // if we processed the formula completely and there is no conflict, we are done and return SAT
           return true
         }
 
-        val decisionLiteral = pickDecisionLiteral(newLastNode.formula)
+        val decisionLiteral = pickDecisionLiteral(lastNode.formula)
 
-        /* In order for this to happen, we would need a conflict first!
-        if (addToRootChoicesIfNecessary(graph, newLastNode, decisionLiteral)) {
-          // if we are at the root node and already tried the decision literal we have UNSAT!
-          return false
-        }
-        */
+        addToRootChoicesIfNecessary(graph, lastNode, decisionLiteral)
 
-        // remove all the clauses that contain the literal
         val updatedClauses =
-          SolverUtils.takeClausesNotContainingLiteral(newLastNode.formula.conjuncts, decisionLiteral)
+          SolverUtils.takeClausesNotContainingLiteral(lastNode.formula.conjuncts, decisionLiteral)
         // remove the negation of the literal from all clauses
         val updatedFormula =
           InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
         val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
-        newLastNode.addChild(newNode)
+        lastNode.addChild(newNode)
         runCDCL(graph, newNode)
     }
   }
@@ -170,7 +166,11 @@ class CDCLSolver extends SATSolvingAlgorithm {
   private[this] def pickDecisionLiteral(formula: InternalCNF): InternalLiteral = {
     val possibleDecisionLiterals =
       formula.conjuncts.foldLeft[Set[InternalDisjunct]](Set())((s, d) => s ++ d.disjuncts.filter(d => d.isActive))
-    possibleDecisionLiterals.head.literal
+    if (possibleDecisionLiterals.isEmpty) {
+      throw new IllegalStateException("Could not pick a decision literal! Formula: " + formula)
+    } else {
+      possibleDecisionLiterals.head.literal
+    }
   }
 
 }
