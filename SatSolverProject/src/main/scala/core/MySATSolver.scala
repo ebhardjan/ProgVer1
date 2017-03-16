@@ -17,10 +17,16 @@ object MySATSolver {
         "[/dp][/dpll][/cdcl]: add one of those to specify the algorithm to be used in solving.")
     }
 
+    // Just run the evaluation and exit the program.
+    if(args.length == 1 && args(0) == "/eval") {
+      AlgorithmEvaluator.runExperiments()
+      System.exit(0)
+    }
+
     val inputString = {
       if(args(0) == "/cnf") {
         convertDIMACSFileToSMTLIBv2(args(1))
-      } else { // convert from .cnf (DIMACS) format
+      } else {
         // This pattern is typical for reading an entire text file into a String
         val source = scala.io.Source.fromFile(args(0))
         try source.mkString finally source.close() // make sure the file is closed
