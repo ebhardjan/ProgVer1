@@ -9,6 +9,7 @@ import util._
 class CDCLSolver extends SATSolvingAlgorithm {
 
   var rootChoices: Set[InternalLiteral] = Set()
+  var graph: RootNode = _
 
   /**
     * Applies the CDCL algorithm to the given formula. Returns None in case of unsat, otherwise the model mapping
@@ -22,25 +23,25 @@ class CDCLSolver extends SATSolvingAlgorithm {
       return None
     }
 
-    val root = RootNode("root", varValue = true, cnfRep)
-    if (runCDCL(root, root)) {
-      Some(root.toModel)
+    graph = RootNode("root", varValue = true, cnfRep)
+    if (runCDCL(graph)) {
+      Some(graph.toModel)
     } else {
       None
     }
   }
 
-  def digestUnitPropagation(root: RootNode, f: InternalCNF, r: (String, Boolean), unitClause: InternalClause) = {
-    val newNode = NonDecisionLiteral(r._1, r._2, f)
+  def digestUnitPropagation(lastNode: ADecisionLiteral, f: InternalCNF, r: (String, Boolean), unitClause: InternalClause): Unit = {
+    val newNode = NonDecisionLiteral(r._1, r._2, lastNode)
     // find all the nodes that were previously in the literal, take their negation and add edges from them to the
     // new node in case they exists.
     val previouslyRemovedLiterals = unitClause.disjuncts.filter(d => !d.isActive)
     if (previouslyRemovedLiterals.isEmpty) {
-      root.addChild(newNode)
+      graph.addChild(newNode)
     } else {
       previouslyRemovedLiterals
         .map(l => l.literal)
-        .map(l => CDCLGraphUtils.findNode(root, InternalLiteral(!l.polarity, l.name)))
+        .map(l => CDCLGraphUtils.findNode(graph, InternalLiteral(!l.polarity, l.name)))
         .collect({ case Some(n) => n })
         .foreach(n => n.addChild(newNode))
     }
@@ -50,20 +51,19 @@ class CDCLSolver extends SATSolvingAlgorithm {
     * Does tautology removal, unit propagation and pure literal elimination until either a conflict is reached, or we
     * cannot do anything anymore and need to guess another variable.
     *
-    * @param root     the root node of the graph
     * @param lastNode the last added node, this is where the children will be added
     */
-  def runToComplete(root: RootNode, lastNode: GraphNode): Unit = {
-    if (CDCLGraphUtils.hasConflict(root).isDefined) {
+  def runToComplete(lastNode: ADecisionLiteral): Unit = {
+    if (CDCLGraphUtils.hasConflict(graph).isDefined) {
       return
     }
     if (lastNode.formula.conjuncts.isEmpty) {
       return
     }
-    removeTautologies(lastNode.formula, root.toModel) match {
+    removeTautologies(lastNode.formula, graph.toModel) match {
       case Some(f) =>
         lastNode.formula = f
-        runToComplete(root, lastNode)
+        runToComplete(lastNode)
         return
       case None =>
     }
@@ -79,11 +79,11 @@ class CDCLSolver extends SATSolvingAlgorithm {
               d
             }))
           val res = applyUnitPropagationOn(lastNode.formula, negation).get
-          digestUnitPropagation(root, res._1, res._2, res._3)
+          digestUnitPropagation(lastNode, res._1, res._2, res._3)
         }
-        digestUnitPropagation(root, f, r, unitClause)
+        digestUnitPropagation(lastNode, f, r, unitClause)
         lastNode.formula = f
-        runToComplete(root, lastNode)
+        runToComplete(lastNode)
       case None =>
     }
     /* TODO should we bother about this one?
@@ -100,8 +100,8 @@ class CDCLSolver extends SATSolvingAlgorithm {
   /**
     * Recursively apply the CDCL steps until the SAT question is answered.
     */
-  def runCDCL(graph: RootNode, lastNode: GraphNode): Boolean = {
-    runToComplete(graph, lastNode)
+  def runCDCL(lastNode: ADecisionLiteral): Boolean = {
+    runToComplete(lastNode)
     val conflictVarName = CDCLGraphUtils.hasConflict(graph)
     conflictVarName match {
       case Some(name) =>
@@ -123,7 +123,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
         if (addToRootChoicesIfNecessary(graph, newLastNode, InternalLiteral(newLastNode.varValue, newLastNode.varName))) {
          false
         } else {
-          runCDCL(graph, newLastNode)
+          runCDCL(newLastNode)
         }
       case None =>
         if (lastNode.formula.conjuncts.isEmpty) {
@@ -142,7 +142,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
           InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
         val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
         lastNode.addChild(newNode)
-        runCDCL(graph, newNode)
+        runCDCL(newNode)
     }
   }
 

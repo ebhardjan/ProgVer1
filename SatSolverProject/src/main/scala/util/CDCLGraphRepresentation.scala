@@ -15,7 +15,6 @@ abstract class GraphNode() {
 
   var varName: String
   var varValue: Boolean
-  var formula: InternalCNF
 
   var children: Set[GraphNode] = Set()
 
@@ -95,17 +94,43 @@ abstract class GraphNode() {
   }
 }
 
+abstract class ADecisionLiteral() extends GraphNode() {
+  var varName: String
+  var varValue: Boolean
+  var formula: InternalCNF
+}
+
 case class RootNode(override var varName: String,
                     override var varValue: Boolean,
                     override var formula: InternalCNF)
-  extends GraphNode() {}
+  extends ADecisionLiteral() {}
 
 case class DecisionLiteral(override var varName: String,
                            override var varValue: Boolean,
                            override var formula: InternalCNF)
-  extends GraphNode() {}
+  extends ADecisionLiteral() {
 
+  // the NonDecisionLiterals that have been added because of this decision literals
+  var decisionImplies: Set[NonDecisionLiteral] = _
+
+  /**
+    * Add a new NonDecision literal that go introduced because of this decision literal
+    *
+    * @param implication the non decision literal that to add
+    */
+  def addDecisionImplication(implication: NonDecisionLiteral) {
+    decisionImplies = decisionImplies + implication
+  }
+}
+
+/**
+  * NonDecisionLiteral
+  *
+  * @param varName  name of the variable
+  * @param varValue value of the variable
+  * @param decision the parent decision literal
+  */
 case class NonDecisionLiteral(override var varName: String,
                               override var varValue: Boolean,
-                              override var formula: InternalCNF)
+                              decision: ADecisionLiteral)
   extends GraphNode() {}

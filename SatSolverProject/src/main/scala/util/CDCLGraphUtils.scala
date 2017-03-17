@@ -103,10 +103,10 @@ object CDCLGraphUtils {
     * @param conflictingVarName name of the variable that has a conflict
     * @return Newly added node. Where we want to proceed from in the next steps.
     */
-  def doBackJumping(graph: RootNode, conflictingVarName: String): GraphNode = {
+  def doBackJumping(graph: RootNode, conflictingVarName: String): DecisionLiteral = {
     val relevantLiterals = relevantDecisionLiterals(graph, conflictingVarName)
 
-    var rootOfDecisionLiteralRemoval: GraphNode = null
+    var rootOfDecisionLiteralRemoval: ADecisionLiteral = null
     if (relevantLiterals.length > 1) {
       // case where we remove all decision literals starting from the next child of the second last relevant one
       rootOfDecisionLiteralRemoval = relevantLiterals(relevantLiterals.length - 2)
@@ -265,10 +265,12 @@ object CDCLGraphUtils {
     *
     * @param learnedClause the new clause we want to just learned and want to add to all formulas
     */
-  def addClauseToAllFormulas(graph: GraphNode, learnedClause: InternalClause): Unit = {
+  def addClauseToAllFormulas(graph: ADecisionLiteral, learnedClause: InternalClause): Unit = {
     graph.formula = InternalCNF(graph.formula.conjuncts + learnedClause)
     if (graph.children.nonEmpty) {
-      graph.children.foreach(c => addClauseToAllFormulas(c, learnedClause))
+      graph.children.foreach {
+        case c@DecisionLiteral(_, _, _) => addClauseToAllFormulas(c.asInstanceOf[DecisionLiteral], learnedClause)
+      }
     }
   }
 
