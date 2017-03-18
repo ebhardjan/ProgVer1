@@ -33,13 +33,7 @@ abstract class GraphNode() {
     * @param remove the child to be removed
     */
   def removeChild(remove: GraphNode): Unit = {
-    val beforeCount = children.size
     children -= remove
-    val afterCount = children.size
-    if (afterCount != beforeCount - 1) {
-      throw new IllegalStateException("Set of children of graph node did not shrink when removing one element! " +
-        "Does the graph not contain the child?")
-    }
   }
 
   /**
@@ -98,6 +92,18 @@ abstract class ADecisionLiteral() extends GraphNode() {
   var varName: String
   var varValue: Boolean
   var formula: InternalCNF
+
+  // the NonDecisionLiterals that have been added because of this decision literal
+  var decisionImplies: Set[NonDecisionLiteral] = Set()
+
+  /**
+    * Add a new NonDecision literal that go introduced because of this decision literal (or the root)
+    *
+    * @param implication the non decision literal to add
+    */
+  def addDecisionImplication(implication: NonDecisionLiteral) {
+    decisionImplies = decisionImplies + implication
+  }
 }
 
 case class RootNode(override var varName: String,
@@ -108,20 +114,7 @@ case class RootNode(override var varName: String,
 case class DecisionLiteral(override var varName: String,
                            override var varValue: Boolean,
                            override var formula: InternalCNF)
-  extends ADecisionLiteral() {
-
-  // the NonDecisionLiterals that have been added because of this decision literals
-  var decisionImplies: Set[NonDecisionLiteral] = _
-
-  /**
-    * Add a new NonDecision literal that go introduced because of this decision literal
-    *
-    * @param implication the non decision literal that to add
-    */
-  def addDecisionImplication(implication: NonDecisionLiteral) {
-    decisionImplies = decisionImplies + implication
-  }
-}
+  extends ADecisionLiteral() {}
 
 /**
   * NonDecisionLiteral

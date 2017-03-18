@@ -80,35 +80,6 @@ class CDCLGraphUtilsTest extends FunSuite {
     assert(lastNodeAfterBackjump.equals(notT))
   }
 
-  test("deleteAllNotDirectlyReachableNonDecisionLiterals") {
-    val graph = RootNode("rootNode", varValue = true, null)
-    val a = DecisionLiteral("a", varValue = true, null)
-    val b = NonDecisionLiteral("b", varValue = true, null)
-    val c = NonDecisionLiteral("c", varValue = true, null)
-    val d = DecisionLiteral("d", varValue = true, null)
-    val e = NonDecisionLiteral("e", varValue = true, null)
-
-    graph.addChild(a)
-    a.addChild(b)
-    a.addChild(d)
-    b.addChild(c)
-    d.addChild(e)
-
-    CDCLGraphUtils.deleteAllNotDirectlyReachableNonDecisionLiterals(graph)
-
-    val expectedResult = RootNode("rootNode", varValue = true, null)
-    val eA = DecisionLiteral("a", varValue = true, null)
-    val eB = NonDecisionLiteral("b", varValue = true, null)
-    val eD = DecisionLiteral("d", varValue = true, null)
-    val eE = NonDecisionLiteral("e", varValue = true, null)
-    expectedResult.addChild(eA)
-    eA.addChild(eB)
-    eA.addChild(eD)
-    eD.addChild(eE)
-
-    assert(graph.recursiveEquals(expectedResult))
-  }
-
   test("getParentNodes") {
     val graph = exampleGraphFromSlides()
 
@@ -143,12 +114,16 @@ class CDCLGraphUtilsTest extends FunSuite {
     val graph: RootNode = RootNode("rootNode", varValue = false, null)
     val n = DecisionLiteral("n", varValue = true, null)
     val p = DecisionLiteral("p", varValue = true, null)
-    val r = NonDecisionLiteral("r", varValue = true, null)
+    val r = NonDecisionLiteral("r", varValue = true, p)
     val notS = DecisionLiteral("s", varValue = false, null)
-    val q = NonDecisionLiteral("q", varValue = true, null)
+    val q = NonDecisionLiteral("q", varValue = true, notS)
     val t = DecisionLiteral("t", varValue = true, null)
-    val u = NonDecisionLiteral("u", varValue = true, null)
-    val notU = NonDecisionLiteral("u", varValue = false, null)
+    val u = NonDecisionLiteral("u", varValue = true, t)
+    val notU = NonDecisionLiteral("u", varValue = false, t)
+    p.addDecisionImplication(r)
+    notS.addDecisionImplication(q)
+    t.addDecisionImplication(u)
+    t.addDecisionImplication(notU)
 
     graph.addChild(n)
     n.addChild(p)

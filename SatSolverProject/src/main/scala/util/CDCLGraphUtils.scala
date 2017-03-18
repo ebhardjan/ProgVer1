@@ -49,28 +49,70 @@ object CDCLGraphUtils {
     * @param conflictVarName variable of which we want to find the relevant decision literals
     * @return list of relevant decision literals
     */
+
   def relevantDecisionLiterals(graph: GraphNode, conflictVarName: String): Seq[DecisionLiteral] = {
-    graph match {
-      case DecisionLiteral(_, _, _) =>
-        if (decisionLiteralReachesConflict(graph.asInstanceOf[DecisionLiteral], conflictVarName)) {
-          graph.children
-            .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: relevantDecisionLiterals(c, conflictVarName))
-        } else {
-          graph.children
-            .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictVarName))
-        }
-      case RootNode(_, _, _) => graph.children
-        .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: relevantDecisionLiterals(c, conflictVarName))
-      case _ => Seq()
+    def _relevantDecisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
+      graph match {
+        case DecisionLiteral(_, _, _) =>
+          if (decisionLiteralReachesConflict(graph.asInstanceOf[DecisionLiteral], conflictVarName)) {
+            graph.children
+              .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: _relevantDecisionLiterals(c))
+          } else {
+            graph.children
+              .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
+          }
+        case RootNode(_, _, _) => graph.children
+          .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
+        case _ => Seq()
+      }
     }
+
+    var relevantDecisionLiterals = _relevantDecisionLiterals(graph)
+
+    // add the obvious decision literals
+    // TODO sure we don't mess with the order here?
+    val responsibleDecisionLiterals = getResponsibleDecisionLiterals(graph, conflictVarName)
+    responsibleDecisionLiterals.foreach(l =>
+      if (!relevantDecisionLiterals.exists(d => d.equals(l))) {
+        relevantDecisionLiterals = relevantDecisionLiterals :+ l
+      }
+    )
+
+    relevantDecisionLiterals
+  }
+
+  /**
+    * Get the decision literals that were the reason for the introduction of a non decision literal with the given name.
+    * We don't care about the polarity here and return both decision literals in case they are different.
+    */
+  private[this] def getResponsibleDecisionLiterals(graph: GraphNode, conflictVarName: String): Set[DecisionLiteral] = {
+    var ret: Set[DecisionLiteral] = Set()
+
+    val posConflictNodeDecision = findNode(graph, InternalLiteral(polarity = true, conflictVarName))
+      .get.asInstanceOf[NonDecisionLiteral].decision
+    posConflictNodeDecision match {
+      case literal: DecisionLiteral =>
+        ret += literal
+      case _ =>
+    }
+
+    val negConflictNodeDecision = findNode(graph, InternalLiteral(polarity = false, conflictVarName))
+      .get.asInstanceOf[NonDecisionLiteral].decision
+    negConflictNodeDecision match {
+      case literal: DecisionLiteral =>
+        ret += literal
+      case _ =>
+    }
+
+    ret
   }
 
   def decisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
     graph match {
-      case DecisionLiteral(_, _, _ ) => graph.children
-        .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s,c) => s ++: decisionLiterals(c))
+      case DecisionLiteral(_, _, _) => graph.children
+        .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: decisionLiterals(c))
       case RootNode(_, _, _) => graph.children
-          .foldLeft[Seq[DecisionLiteral]](Seq())((s,c) => s ++: decisionLiterals(c))
+        .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: decisionLiterals(c))
       case _ => Seq()
     }
   }
@@ -79,19 +121,6 @@ object CDCLGraphUtils {
     * helper function that returns whether a given decision literal can reach a conflict via only NonDecision literals
     */
   private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictVarName: String): Boolean = {
-    /*
-    def _reaches(node: GraphNode, allowDecisionLiteral: Boolean): Boolean = {
-      if (conflictVarName.equals(node.varName)) {
-        true
-      } else {
-        node.children
-          .filter(c => c.isInstanceOf[NonDecisionLiteral] || allowDecisionLiteral)
-          .foldLeft(false)((acc, c) => acc || _reaches(c, allowDecisionLiteral = false))
-      }
-    }
-    */
-
-    //_reaches(node, allowDecisionLiteral = true)
     node.children.exists(n => conflictVarName.equals(n.varName))
   }
 
@@ -116,11 +145,7 @@ object CDCLGraphUtils {
     }
 
     // cut only one relevant literal + as many others as possible
-    deleteAllDecisionLiteralsStartingWithChildOf(rootOfDecisionLiteralRemoval)
-    // remove the conflict nodes from the graph
-    deleteConflictingLiteral(graph, conflictingVarName)
-    // remove any other not directly reachable NonDecisionLiteral nodes from the graph
-    deleteAllNotDirectlyReachableNonDecisionLiterals(graph)
+    deleteAllDecisionLiteralsStartingWithChildOf(graph, rootOfDecisionLiteralRemoval)
 
     // add the negation of the last relevant decision literal
     val removedRelevantDecisionLiteral = relevantLiterals.last
@@ -148,58 +173,33 @@ object CDCLGraphUtils {
   }
 
   /**
-    * deletes all direct and indirect children that are decision literals
+    * deletes all direct and indirect children that are decision literals and the non decision literals
+    * that got introduced because of those decision literals
     *
+    * @param root                    the root node of the graph
     * @param parentOfDecisionLiteral parent node of the first decision literal that will be deleted
     */
-  private[this] def deleteAllDecisionLiteralsStartingWithChildOf(parentOfDecisionLiteral: GraphNode): Unit = {
+  private[this] def deleteAllDecisionLiteralsStartingWithChildOf(root: RootNode, parentOfDecisionLiteral: GraphNode): Unit = {
     val nextDecisionLiteral = findFirstDecisionLiteralChild(parentOfDecisionLiteral)
     if (nextDecisionLiteral != null) {
-      deleteAllDecisionLiteralsStartingWithChildOf(nextDecisionLiteral)
+      deleteAllDecisionLiteralsStartingWithChildOf(root, nextDecisionLiteral)
+      // delete all the non decision literals that got implied because of this decision literal
+      nextDecisionLiteral.decisionImplies.foreach(nd => deleteNonDecisionLiteralFromGraph(root, nd.varName))
       parentOfDecisionLiteral.removeChild(nextDecisionLiteral)
     }
   }
 
   /**
-    * deletes the literals that are part of a conflict in a given graph
+    * Deletes a non-decision literal from the graph
     */
-  private[this] def deleteConflictingLiteral(graph: GraphNode, conflictVarName: String): Unit = {
+  private[this] def deleteNonDecisionLiteralFromGraph(graph: GraphNode, varName: String): Unit = {
     graph.children.foreach(c =>
-      if (c.varName.equals(conflictVarName)) {
-        graph.removeChild(c)
-      } else {
-        deleteConflictingLiteral(c, conflictVarName)
-      })
-  }
-
-  /**
-    * deletes all non-decision literals in a graph that are not directly reachable by a decision literal
-    */
-  def deleteAllNotDirectlyReachableNonDecisionLiterals(graph: RootNode): Unit = {
-    var reachable: Set[NonDecisionLiteral] = Set()
-
-    def _traverseGraphAndAddToReachable(graph: GraphNode): Unit = {
-      graph match {
-        case g: NonDecisionLiteral => reachable += g
-        case _ => graph.children.foreach(c => _traverseGraphAndAddToReachable(c))
+      if (c.varName.equals(varName)) {
+        graph.children -= c
       }
-    }
-
-    def _deleteAllElementsNotInReachable(graph: GraphNode): Unit = {
-      graph.children.foreach {
-        case child: NonDecisionLiteral =>
-          if (!reachable.contains(child)) {
-            graph.removeChild(child)
-          }
-          _deleteAllElementsNotInReachable(child)
-        case child: Any => _deleteAllElementsNotInReachable(child)
-      }
-    }
-
-    _traverseGraphAndAddToReachable(graph)
-    _deleteAllElementsNotInReachable(graph)
+    )
+    graph.children.foreach(c => deleteNonDecisionLiteralFromGraph(c, varName))
   }
-
 
   /**
     * Returns the new claus that is introduced by the graph cut
@@ -269,7 +269,8 @@ object CDCLGraphUtils {
     graph.formula = InternalCNF(graph.formula.conjuncts + learnedClause)
     if (graph.children.nonEmpty) {
       graph.children.foreach {
-        case c@DecisionLiteral(_, _, _) => addClauseToAllFormulas(c.asInstanceOf[DecisionLiteral], learnedClause)
+        case c: DecisionLiteral => addClauseToAllFormulas(c.asInstanceOf[DecisionLiteral], learnedClause)
+        case _ =>
       }
     }
   }

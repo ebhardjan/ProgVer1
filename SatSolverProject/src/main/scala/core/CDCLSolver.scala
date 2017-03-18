@@ -33,6 +33,10 @@ class CDCLSolver extends SATSolvingAlgorithm {
 
   def digestUnitPropagation(lastNode: ADecisionLiteral, f: InternalCNF, r: (String, Boolean), unitClause: InternalClause): Unit = {
     val newNode = NonDecisionLiteral(r._1, r._2, lastNode)
+
+    // add the node to the implications of the last decision literal
+    lastNode.addDecisionImplication(newNode)
+
     // find all the nodes that were previously in the literal, take their negation and add edges from them to the
     // new node in case they exists.
     val previouslyRemovedLiterals = unitClause.disjuncts.filter(d => !d.isActive)
@@ -105,6 +109,12 @@ class CDCLSolver extends SATSolvingAlgorithm {
     val conflictVarName = CDCLGraphUtils.hasConflict(graph)
     conflictVarName match {
       case Some(name) =>
+
+        // conflict without even making a choice!
+        if (rootChoices.isEmpty) {
+          return false
+        }
+
         val learnedClause = CDCLGraphUtils.learnClause(graph, name)
 
         val newLastNode = CDCLGraphUtils.doBackJumping(graph, name)
@@ -133,7 +143,6 @@ class CDCLSolver extends SATSolvingAlgorithm {
 
         val decisionLiteral = pickDecisionLiteral(lastNode.formula)
 
-        addToRootChoicesIfNecessary(graph, lastNode, decisionLiteral)
 
         val updatedClauses =
           SolverUtils.takeClausesNotContainingLiteral(lastNode.formula.conjuncts, decisionLiteral)
@@ -142,6 +151,8 @@ class CDCLSolver extends SATSolvingAlgorithm {
           InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
         val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
         lastNode.addChild(newNode)
+
+        addToRootChoicesIfNecessary(graph, newNode, decisionLiteral)
         runCDCL(newNode)
     }
   }
