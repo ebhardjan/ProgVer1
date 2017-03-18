@@ -67,44 +67,7 @@ object CDCLGraphUtils {
       }
     }
 
-    var relevantDecisionLiterals = _relevantDecisionLiterals(graph)
-
-    // add the obvious decision literals
-    // TODO sure we don't mess with the order here?
-    val responsibleDecisionLiterals = getResponsibleDecisionLiterals(graph, conflictVarName)
-    responsibleDecisionLiterals.foreach(l =>
-      if (!relevantDecisionLiterals.exists(d => d.equals(l))) {
-        relevantDecisionLiterals = relevantDecisionLiterals :+ l
-      }
-    )
-
-    relevantDecisionLiterals
-  }
-
-  /**
-    * Get the decision literals that were the reason for the introduction of a non decision literal with the given name.
-    * We don't care about the polarity here and return both decision literals in case they are different.
-    */
-  private[this] def getResponsibleDecisionLiterals(graph: GraphNode, conflictVarName: String): Set[DecisionLiteral] = {
-    var ret: Set[DecisionLiteral] = Set()
-
-    val posConflictNodeDecision = findNode(graph, InternalLiteral(polarity = true, conflictVarName))
-      .get.asInstanceOf[NonDecisionLiteral].decision
-    posConflictNodeDecision match {
-      case literal: DecisionLiteral =>
-        ret += literal
-      case _ =>
-    }
-
-    val negConflictNodeDecision = findNode(graph, InternalLiteral(polarity = false, conflictVarName))
-      .get.asInstanceOf[NonDecisionLiteral].decision
-    negConflictNodeDecision match {
-      case literal: DecisionLiteral =>
-        ret += literal
-      case _ =>
-    }
-
-    ret
+    _relevantDecisionLiterals(graph)
   }
 
   def decisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
@@ -121,7 +84,8 @@ object CDCLGraphUtils {
     * helper function that returns whether a given decision literal can reach a conflict via only NonDecision literals
     */
   private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictVarName: String): Boolean = {
-    node.children.exists(n => conflictVarName.equals(n.varName))
+    node.children.exists(n => conflictVarName.equals(n.varName)) ||
+      node.decisionImplies.exists(n => conflictVarName.equals(n.varName))
   }
 
   /**
