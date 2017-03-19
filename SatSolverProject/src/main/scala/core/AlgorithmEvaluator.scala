@@ -5,6 +5,9 @@ import java.io.{File, PrintWriter}
 import smtlib.parser.Commands._
 import smtlib.parser.Terms.Term
 
+import scala.concurrent.{Await, Future, TimeoutException}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Created by Severin on 2017-03-16.
@@ -12,11 +15,13 @@ import smtlib.parser.Terms.Term
   * Run the test from a folder with all three algorithms, measuring the runtime. Store all the gathered data in a file.
   */
 object AlgorithmEvaluator {
-  val srcFolder: String = "src/test/resources/solving"
-  val targetFolder: String = "src/test/resources/evaluation"
+  val srcFolder: String = "src/test/resources/solving/"
+  val targetFolder: String = "src/test/resources/solving/"
 
   // Specify number of runs over which the runtime should be averaged.
-  val nRuns: Int = 5
+  val nRuns: Int = 50
+  // Specify maximum time to let the algorithm run before giving up and specifying runtime as 'i'.
+  val maxRuntime: FiniteDuration = 10 minutes
 
   private[this] def getListOfSmt2Files(directoryPath: String): List[String] = {
     val directory = new File(directoryPath)
@@ -48,37 +53,44 @@ object AlgorithmEvaluator {
   }
 
   private def runAlgorithm(formula: Term, solver: SATSolvingAlgorithm): String = {
-    val t0 = System.currentTimeMillis()
     try {
-      solver.checkSAT(formula)
-      val t1 = System.currentTimeMillis()
-      (t1 - t0).toString
+      Await.result(Future[String] {
+        try {
+          val t0 = System.currentTimeMillis()
+          solver.checkSAT(formula)
+          val t1 = System.currentTimeMillis()
+          (t1 - t0).toString
+        } catch {
+          case _: OutOfMemoryError =>
+            "x"
+        }
+      }, maxRuntime)
     } catch {
-      case e: Exception => "x"
+      case _: TimeoutException =>
+        "i"
     }
   }
 
   private def averagedAlgorithmRuns(formula: Term, solver: SATSolvingAlgorithm, n: Int): String = {
     var results: Seq[String] = Seq()
     for (_ <- 1 to n) {
-      results = runAlgorithm(formula, solver) +: results
-    }
-    results.foldLeft[String]("")((s, next) => {
-      s match {
-        case "x" => "x"
-        case "" => next
-        case n1 =>
-          next match {
-            case "x" => "x"
-            case n2  => ((n2.toDouble + n1.toDouble) / 2).toString
-          }
+      val nextResult = runAlgorithm(formula, solver)
+      nextResult match {
+        case "i" => return "i"
+        case "x" => return "x"
+        case _ => results = nextResult +: results
       }
-    })
+    }
+    (results.foldLeft[Double](0)((s, next) => {
+      s + next.toDouble
+    }) / n).toString
   }
 
   def runExperiments(): String = {
     val filename: String = targetFolder + "/evaluations.txt"
     val pw = new PrintWriter(new File(filename))
+
+    pw.write(s"nRuns=$nRuns i=${maxRuntime.toString()}\n")
 
     val dpSolver: DPSolver = new DPSolver
     val dpllSolver: DPLLSolver = new DPLLSolver
@@ -86,9 +98,16 @@ object AlgorithmEvaluator {
     for (f <- getListOfSmt2Files(srcFolder)) {
       val formula = readFormulaFile(srcFolder, f)
       val cnf = CNFConversion.toCNF(formula)
-      val currentLine: String = "dp:" + averagedAlgorithmRuns(cnf, dpSolver, nRuns) +
-        "  dpll:" + averagedAlgorithmRuns(cnf, dpllSolver, nRuns) + "\n"
-      pw.write(currentLine)
+
+      val dpFuture: Future[String] = Future {averagedAlgorithmRuns(cnf, dpSolver, nRuns)}
+      val dpllFuture: Future[String] = Future {averagedAlgorithmRuns(cnf, dpllSolver, nRuns)}
+
+      val currentLine = for {
+        dpResult <- dpFuture
+        dpllResult <- dpllFuture
+      } yield pw.write("dp:" + dpResult + "  dpll:" + dpllResult + s" ($f)\n")
+
+      Await.result(currentLine, Duration.Inf)
     }
     pw.close()
     filename
