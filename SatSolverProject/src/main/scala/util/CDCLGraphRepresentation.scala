@@ -33,7 +33,7 @@ abstract class GraphNode() {
     * @param remove the child to be removed
     */
   def removeChild(remove: GraphNode): Unit = {
-    children -= remove
+    children = children.filter(n => !n.equals(remove)) //TODO: why on earth does children -= remove not work?
   }
 
   /**
@@ -101,6 +101,22 @@ abstract class ADecisionLiteral() extends GraphNode() {
 
   // the NonDecisionLiterals that have been added because of this decision literal
   var decisionImplies: Set[NonDecisionLiteral] = Set()
+
+  // children that have been tried as DecisionLiterals
+  var triedChildNodes: Map[InternalLiteral, Integer] = Map()
+
+  def addTriedChild(varName: String, varValue: Boolean): Unit = {
+    val literal = InternalLiteral(varValue, varName)
+    if(triedChildNodes.contains(literal)) {
+      triedChildNodes += (literal -> (triedChildNodes(literal) + 1))
+    } else {
+      triedChildNodes += (literal -> 1)
+    }
+  }
+
+  def abort(): Boolean = {
+    triedChildNodes.values.exists(i => i > 2)
+  }
 
   /**
     * Add a new NonDecision literal that go introduced because of this decision literal (or the root)

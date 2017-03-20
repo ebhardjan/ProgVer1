@@ -63,7 +63,7 @@ class CDCLGraphUtilsTest extends FunSuite {
   test("backJumpExampleFromSlides") {
     val graph = exampleGraphFromSlides()
     val conflictVar = CDCLGraphUtils.hasConflict(graph).get
-    val lastNodeAfterBackjump = CDCLGraphUtils.doBackJumping(graph, conflictVar)
+    val (parentDecisionLiteral, varName, varValue) = CDCLGraphUtils.doBackJumping(graph, conflictVar)
 
     val resultGraph: RootNode = RootNode("rootNode", varValue = false, null)
     val n = DecisionLiteral("n", varValue = true, null)
@@ -76,8 +76,10 @@ class CDCLGraphUtilsTest extends FunSuite {
     p.addChild(r)
     p.addChild(notT)
 
+    parentDecisionLiteral.addChild(DecisionLiteral(varName, varValue, null))
     assert(graph.recursiveEquals(resultGraph))
-    assert(lastNodeAfterBackjump.equals(notT))
+    assert(varName.equals(notT.varName))
+    assert(varValue.equals(notT.varValue))
   }
 
   test("getParentNodes") {
@@ -108,6 +110,51 @@ class CDCLGraphUtilsTest extends FunSuite {
       )
     )
     assert(learnedClause.equals(expectedClause))
+  }
+
+  test("deleteDecisionLiteralStartingWithChildOf") {
+    val root = RootNode("rootNode", varValue = false, null)
+    val nP0 = DecisionLiteral("p0", varValue = false, null)
+    val nP2 = DecisionLiteral("p2", varValue = false, null)
+    val nP3 = NonDecisionLiteral("p3", varValue = false, null)
+    val nP1 = NonDecisionLiteral("p1", varValue = false, null)
+    val p5 = NonDecisionLiteral("p5", varValue = true, null)
+    val p4 = NonDecisionLiteral("p4", varValue = true, null)
+    val nP4 = NonDecisionLiteral("p4", varValue = false, null)
+    root.addChild(nP0)
+
+    nP0.addChild(nP3)
+    nP0.addChild(nP1)
+    nP0.addChild(p5)
+    nP0.addChild(p4)
+    nP0.addChild(nP2)
+    nP0.addDecisionImplication(nP3)
+    nP0.addDecisionImplication(nP1)
+
+    nP3.addChild(nP1)
+    nP3.addChild(p5)
+
+    p5.addChild(p4)
+
+    nP2.addChild(p5)
+    nP2.addChild(nP4)
+
+    nP2.addDecisionImplication(p5)
+    nP2.addDecisionImplication(p4)
+    nP2.addDecisionImplication(nP4)
+
+    CDCLGraphUtils.deleteAllDecisionLiteralsStartingWithChildOf(root, nP0)
+
+    val expected = RootNode("rootNode", varValue = false, null)
+    val eNP0 = DecisionLiteral("p0", varValue = false, null)
+    val eNP3 = NonDecisionLiteral("p3", varValue = false, null)
+    val eNP1 = NonDecisionLiteral("p1", varValue = false, null)
+    expected.addChild(eNP0)
+    eNP0.addChild(eNP3)
+    eNP0.addChild(eNP1)
+    eNP3.addChild(eNP1)
+
+    assert(root.recursiveEquals(expected))
   }
 
   def exampleGraphFromSlides(): RootNode = {

@@ -38,7 +38,7 @@ class CDCLSolverPreviouslyFailingTest extends FunSuite {
   /**
     * for debugging...
     */
-  test("dummy_test") {
+  ignore("dummy_test") {
     // paste number of failing test here to debug manually
     val testNr = "277ea7b1-d67c-40a7-a09d-129bce3fb293"
 
