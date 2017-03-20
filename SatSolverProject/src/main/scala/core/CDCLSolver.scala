@@ -115,6 +115,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
   def runCDCL(lastNode: ADecisionLiteral, unsatWithNextConflict: Boolean): Boolean = {
     runToComplete(lastNode)
     val conflictVarName = CDCLGraphUtils.hasConflict(graph)
+    //GraphVisualizer.displayXdot(graph)
     conflictVarName match {
       case Some(name) =>
 
@@ -135,20 +136,29 @@ class CDCLSolver extends SATSolvingAlgorithm {
         // just for the new clause that we just learned
         runToComplete(newLastNodeParent)
 
-        val newLastNode = DecisionLiteral(newVarName, newVarValue, newLastNodeParent.formula)
-        newLastNodeParent.addChild(newLastNode)
+        // TODO only add the decison literal if there is not already a NonDecisionLiteral in the graph with the same meaning.
+        // only add the decision literal if it is not already implied
+        val newLastNode = {
+          if (CDCLGraphUtils.findNode(graph, InternalLiteral(newVarValue, newVarName)).isEmpty) {
+            val dl = DecisionLiteral(newVarName, newVarValue, newLastNodeParent.formula)
+            // TODO remove this duplicate code!
+            // TODO: no nodes are introduced here! !b should have an incoming edge from a for instance
+            val updatedClauses =
+            SolverUtils.takeClausesNotContainingLiteral(dl.formula.conjuncts,
+              InternalLiteral(dl.varValue, dl.varName))
+            // remove the negation of the literal from all clauses
+            val updatedFormula =
+              InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses,
+                InternalLiteral(!dl.varValue, dl.varName)))
 
-        // TODO remove this duplicate code!
-        // TODO: no nodes are introduced here! !b should have an incoming edge from a for instance
-        val updatedClauses =
-          SolverUtils.takeClausesNotContainingLiteral(newLastNode.formula.conjuncts,
-            InternalLiteral(newLastNode.varValue, newLastNode.varName))
-        // remove the negation of the literal from all clauses
-        val updatedFormula =
-          InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses,
-            InternalLiteral(!newLastNode.varValue, newLastNode.varName)))
+            dl.formula = updatedFormula
+            newLastNodeParent.addChild(dl)
+            dl
+          } else {
+            newLastNodeParent
+          }
+        }
 
-        newLastNode.formula = updatedFormula
         val stopOnNextConflict = addToRootChoicesIfNecessary(graph, newLastNode, InternalLiteral(newLastNode.varValue, newLastNode.varName))
         runCDCL(newLastNode, stopOnNextConflict)
       case None =>
