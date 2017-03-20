@@ -59,7 +59,13 @@ abstract class GraphNode() {
     }
   }
 
-  override def toString: String = "( " + varName + " = " + varValue.toString + " )"
+  override def toString: String = {
+    var res: String = ""
+    if (!varValue) {
+     res += "!"
+    }
+    res + varName
+  }
 
   override def equals(obj: scala.Any): Boolean = {
     obj match {

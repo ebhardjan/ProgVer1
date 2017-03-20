@@ -53,16 +53,14 @@ object CDCLGraphUtils {
   def relevantDecisionLiterals(graph: GraphNode, conflictVarName: String): Seq[DecisionLiteral] = {
     def _relevantDecisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
       graph match {
-        case DecisionLiteral(_, _, _) =>
-          if (decisionLiteralReachesConflict(graph.asInstanceOf[DecisionLiteral], conflictVarName)) {
-            graph.children
-              .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: _relevantDecisionLiterals(c))
+        case d: DecisionLiteral =>
+          if (decisionLiteralReachesConflict(d, conflictVarName)) {
+            d.children.foldLeft(Seq(d))((s, c) => s ++: _relevantDecisionLiterals(c))
           } else {
-            graph.children
-              .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
+            d.children.foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
           }
-        case RootNode(_, _, _) => graph.children
-          .foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
+        case r: RootNode =>
+          r.children.foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
         case _ => Seq()
       }
     }
@@ -84,8 +82,17 @@ object CDCLGraphUtils {
     * helper function that returns whether a given decision literal can reach a conflict via only NonDecision literals
     */
   private[this] def decisionLiteralReachesConflict(node: DecisionLiteral, conflictVarName: String): Boolean = {
-    node.children.exists(n => conflictVarName.equals(n.varName)) ||
-      node.decisionImplies.exists(n => conflictVarName.equals(n.varName))
+    def _reaches(graphNode: GraphNode): Boolean = {
+      if (graphNode.varName.equals(conflictVarName)) {
+        true
+      } else {
+        graphNode.children.collect({ case d: NonDecisionLiteral => d }).foldLeft(false)((acc, n) => acc || _reaches(n))
+      }
+    }
+
+    node.decisionImplies.exists(n => conflictVarName.equals(n.varName)) ||
+    node.children.exists(n => conflictVarName.equals(n.varName))
+    //  _reaches(node)
   }
 
   /**
@@ -96,7 +103,7 @@ object CDCLGraphUtils {
     * @param conflictingVarName name of the variable that has a conflict
     * @return Newly added node. Where we want to proceed from in the next steps.
     */
-  def doBackJumping(graph: RootNode, conflictingVarName: String): DecisionLiteral = {
+  def doBackJumping(graph: RootNode, conflictingVarName: String): (ADecisionLiteral, String, Boolean) = {
     val relevantLiterals = relevantDecisionLiterals(graph, conflictingVarName)
 
     var rootOfDecisionLiteralRemoval: ADecisionLiteral = null
@@ -113,12 +120,14 @@ object CDCLGraphUtils {
 
     // add the negation of the last relevant decision literal
     val removedRelevantDecisionLiteral = relevantLiterals.last
+    /*
     val newDecisionLiteral = DecisionLiteral(removedRelevantDecisionLiteral.varName,
       !removedRelevantDecisionLiteral.varValue,
       rootOfDecisionLiteralRemoval.formula)
     rootOfDecisionLiteralRemoval.addChild(newDecisionLiteral)
+    */
 
-    newDecisionLiteral
+    (rootOfDecisionLiteralRemoval, removedRelevantDecisionLiteral.varName, !removedRelevantDecisionLiteral.varValue)
   }
 
   /**
@@ -175,7 +184,13 @@ object CDCLGraphUtils {
     // other one.
     val conflict = NonDecisionLiteral(conflictVarName, varValue = true, null)
     val notConflict = NonDecisionLiteral(conflictVarName, varValue = false, null)
-    val parents = getParentNodes(graph, conflict) ++ getParentNodes(graph, notConflict)
+    val p1 = getParentNodes(graph, conflict)
+    val p2 = getParentNodes(graph, notConflict)
+    val parents = p1 ++ p2/* +
+      findNode(graph, InternalLiteral(polarity = true, name = conflictVarName)).get.asInstanceOf[NonDecisionLiteral].decision
+      findNode(graph, InternalLiteral(polarity = false, name = conflictVarName)).get.asInstanceOf[NonDecisionLiteral].decision
+      */
+
 
     // All the nodes that have outgoing edges are simply the parent nodes.
     // Create the disjunction of their negations
@@ -192,7 +207,14 @@ object CDCLGraphUtils {
     if (graph.children.isEmpty) {
       Set()
     } else {
-      graph.children.foldLeft[Set[GraphNode]](Set())((s, c) => {
+      val childrenSet = graph.children ++ {
+        graph match {
+          //TODO have this or not have this?
+          //case d: DecisionLiteral => d.decisionImplies
+          case _: Any => Seq[GraphNode]()
+        }
+      }
+      childrenSet.foldLeft[Set[GraphNode]](Set())((s, c) => {
         if (c.equals(needle)) {
           s + graph ++ getParentNodes(c, needle)
         } else {

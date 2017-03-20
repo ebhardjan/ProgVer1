@@ -45,6 +45,10 @@ case class InternalCNF(conjuncts : Set[InternalClause]) {
 
   // returns the set of variable names occurring positively/negatively (according to b)
   def vars(b: Boolean) : Set[String] = conjuncts.foldLeft[Set[String]](Set())((set,c) => set union c.vars(b))
+
+  override def clone(): InternalCNF = {
+    InternalCNF(conjuncts.map(c => c.clone()))
+  }
 }
 
 // convert a given SMT-LIB formula (in CNF form) to its corresponding internal representation
