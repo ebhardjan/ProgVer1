@@ -59,7 +59,7 @@ object MySATSolver {
 //    val res = DPSolver.checkSAT(CNFInput)
     val dPLLSolver = new DPLLSolver
     val res = Utils.time(dPLLSolver.checkSAT(CNFInput))
-    println(DPSolver.outputResult(res))
+    println((new DPSolver).outputResult(res))
   }
 
 
