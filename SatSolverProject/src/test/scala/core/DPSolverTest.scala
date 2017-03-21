@@ -29,7 +29,7 @@ class DPSolverTest extends FunSuite {
     * Create as many tests as there are files in the specified folder.
     */
   for (f <- getListOfSmt2Files(folder)) {
-    test("dp_solver_" + f) {
+    ignore("dp_solver_" + f) {
       val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
       assert(SolverValidator.solveFormulaAndValidate(formula, new DPSolver))
     }
@@ -38,7 +38,7 @@ class DPSolverTest extends FunSuite {
   /**
     * for debugging...
     */
-  test("dummy_test") {
+  ignore("dummy_test") {
     // paste number of failing test here to debug manually
     val testNr = "09"
 

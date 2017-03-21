@@ -25,7 +25,7 @@ object SolverValidator {
     val dpResult: Option[Map[String, Boolean]] = solver.checkSAT(formula)
     // is the result the same as z3 solver gives / is the model valid?
     if (!SolverTestUtils.checkSATResult(dpResult, formula)) {
-      println("The result from DP is not the same the z3 solver gives.")
+      println("The result from " + solver.getClass.getSimpleName + " is not the same the z3 solver gives.")
       return false
     }
     true

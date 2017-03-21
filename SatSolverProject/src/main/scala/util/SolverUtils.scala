@@ -17,7 +17,9 @@ object SolverUtils {
     */
   def evaluateClause(clause: InternalClause, model: Map[String, Boolean], interpretMissingVars: Boolean = false)
   : Boolean = {
-    clause.disjuncts.foldLeft[Boolean](false)((b, disjunct: InternalDisjunct) => b || {
+    clause.disjuncts
+      .filter(d => d.isActive)
+      .foldLeft[Boolean](false)((b, disjunct: InternalDisjunct) => b || {
       model getOrElse(disjunct.literal.name, None) match {
         case None => interpretMissingVars && disjunct.literal.polarity
         case value => disjunct.literal.polarity == value
@@ -26,7 +28,7 @@ object SolverUtils {
   }
 
   /**
-    * Check if a clause is a tautology (conatains literal in both polarities)
+    * Check if a clause is a tautology (contains literal in both polarities)
     *
     * @param clause The clause to check.
     * @return True if the clause is a tautology, false otherwise.
@@ -85,11 +87,11 @@ object SolverUtils {
     */
   def takeClausesNotContainingLiteral(set: Set[InternalClause], literal: InternalLiteral)
   : Set[InternalClause] = {
-    for (clause <- set if {
-      (for (disjunct @ InternalDisjunct(InternalLiteral(pol, varName), isActive) <- clause.disjuncts if {
-        varName == literal.name && pol == literal.polarity && isActive
-      }) yield disjunct).isEmpty
-    }) yield clause
+    set
+      .filter(c => !c.disjuncts.exists(d => d.isActive
+        && d.literal.name == literal.name
+        && d.literal.polarity == literal.polarity))
+      .map(c => c.clone())
   }
 
   /**
@@ -100,7 +102,13 @@ object SolverUtils {
     * @return The resulting set of clauses.
     */
   def removeLiteralFromClauses(clauses: Set[InternalClause], literal: InternalLiteral): Set[InternalClause] = {
-    for (c <- clauses) yield InternalClause(for (d <- c.disjuncts if d.literal != literal) yield d)
+    clauses.foreach(c =>
+      c.disjuncts.foreach(d =>
+        if (d.literal.equals(literal)) {
+          d.isActive = false
+        })
+    )
+    clauses
   }
 
   /**
