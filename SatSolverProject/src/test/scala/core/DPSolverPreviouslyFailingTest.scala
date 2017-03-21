@@ -40,7 +40,7 @@ class DPSolverPreviouslyFailingTest extends FunSuite {
   /**
     * for debugging...
     */
-  test("dummy_test") {
+  ignore("dummy_test") {
     // paste uuid of failing test here to debug manually
     val uuid = "306ac934-58f6-42c8-935d-4ea6321f1fe0"
 

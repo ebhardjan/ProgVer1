@@ -1,0 +1,25 @@
+( set-option :produce-models true )
+( set-logic QF_UF )
+
+( declare-fun n () Bool )
+( declare-fun p () Bool )
+( declare-fun q () Bool )
+( declare-fun r () Bool )
+( declare-fun s () Bool )
+( declare-fun t () Bool )
+( declare-fun u () Bool )
+
+( assert ( and
+ ( or n p )
+ ( or (not n) p q )
+ ( or (not p) r )
+ ( or (not u) t )
+ ( or (not r) (not s) t )
+ ( or q s )
+ ( or (not p) t u )
+ ( or (not p) (not t) (not u) )
+ ( or (not r) (not t) u )
+))
+
+( check-sat )
+( get-model )

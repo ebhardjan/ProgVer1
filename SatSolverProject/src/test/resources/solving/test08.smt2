@@ -3,6 +3,7 @@
 
 ( declare-fun p1 () Bool )
 ( declare-fun p2 () Bool )
+( declare-fun p3 () Bool )
 
 ( assert ( and
  (or p1 p2)
