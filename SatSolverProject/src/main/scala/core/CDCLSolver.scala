@@ -6,6 +6,15 @@ import util._
 /**
   * Created by jan on 09.03.17.
   */
+
+
+object CDCLSolverWrapper extends SATSolvingAlgorithm {
+
+  override def checkSAT(formula: Term): Option[Map[String, Boolean]] = {
+    (new CDCLSolver).checkSAT(formula)
+  }
+}
+
 class CDCLSolver extends SATSolvingAlgorithm {
 
   var graph: RootNode = _
