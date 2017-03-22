@@ -10,6 +10,15 @@ import scala.collection.immutable.Set
   *
   * Solve the SAT problem given a formula using the Davis-Putnam algorithm.
   */
+
+
+object DPSolverWrapper extends SATSolvingAlgorithm {
+
+  override def checkSAT(formula: Term): Option[Map[String, Boolean]] = {
+    (new DPSolver).checkSAT(formula)
+  }
+}
+
 class DPSolver extends SATSolvingAlgorithm {
 
   /**
@@ -86,7 +95,10 @@ class DPSolver extends SATSolvingAlgorithm {
     * Return a literal on which to do resolution. For now just return first occurring literal.
     */
   def pickVictimLiteral(formula: InternalCNF): InternalLiteral = {
-    formula.conjuncts.head.disjuncts.head.literal
+    for (d <- formula.conjuncts.head.disjuncts) {
+      if (d.isActive) return d.literal
+    }
+    throw new Exception("No victim literal found!")
   }
 
   /**

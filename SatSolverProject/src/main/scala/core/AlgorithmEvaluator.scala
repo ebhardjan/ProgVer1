@@ -4,6 +4,7 @@ import java.io.{File, PrintWriter}
 
 import smtlib.parser.Commands._
 import smtlib.parser.Terms.Term
+import util.PropositionalLogic
 
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.concurrent.duration._
@@ -16,12 +17,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 object AlgorithmEvaluator {
   val srcFolder: String = "src/test/resources/solving/"
-  val targetFolder: String = "src/test/resources/solving/"
+  val targetFolder: String = "src/test/resources/solving"
 
   // Specify number of runs over which the runtime should be averaged.
-  val nRuns: Int = 50
+  val nRuns: Int = 1
   // Specify maximum time to let the algorithm run before giving up and specifying runtime as 'i'.
-  val maxRuntime: FiniteDuration = 10 minutes
+  val maxRuntime: FiniteDuration = 1 second
 
   private[this] def getListOfSmt2Files(directoryPath: String): List[String] = {
     val directory = new File(directoryPath)
@@ -66,8 +67,7 @@ object AlgorithmEvaluator {
         }
       }, maxRuntime)
     } catch {
-      case _: TimeoutException =>
-        "i"
+      case _: TimeoutException => "i"
     }
   }
 
@@ -92,20 +92,39 @@ object AlgorithmEvaluator {
 
     pw.write(s"nRuns=$nRuns i=${maxRuntime.toString()}\n")
 
-    val dpSolver: DPSolver = new DPSolver
-    val dpllSolver: DPLLSolver = new DPLLSolver
-
     for (f <- getListOfSmt2Files(srcFolder)) {
+      println(s"Parsing file $f")
       val formula = readFormulaFile(srcFolder, f)
-      val cnf = CNFConversion.toCNF(formula)
+      val cnf = {
+        if (PropositionalLogic.isCNF(formula)) {
+          formula
+        } else {
+          CNFConversion.toCNF(formula)
+        }
+      }
 
-      val dpFuture: Future[String] = Future {averagedAlgorithmRuns(cnf, dpSolver, nRuns)}
-      val dpllFuture: Future[String] = Future {averagedAlgorithmRuns(cnf, dpllSolver, nRuns)}
+      val dpFuture: Future[String] = Future {
+        println(s"Running DP on $f")
+        averagedAlgorithmRuns(cnf, DPSolverWrapper, nRuns)
+      }
+      // use this to make execution sequential
+      Await.result(dpFuture, Duration.Inf)
+
+      val dpllFuture: Future[String] = Future {
+        println(s"Running DPLL on $f")
+        averagedAlgorithmRuns(cnf, new DPLLSolver, nRuns)
+      }
+
+      val cdclFuture: Future[String] = Future {
+        println(s"Running CDCL on $f")
+        averagedAlgorithmRuns(cnf, CDCLSolverWrapper, nRuns)
+      }
 
       val currentLine = for {
         dpResult <- dpFuture
         dpllResult <- dpllFuture
-      } yield pw.write("dp:" + dpResult + "  dpll:" + dpllResult + s" ($f)\n")
+        cdclResult <- cdclFuture
+      } yield pw.write("dp:" + dpResult + "  dpll:" + dpllResult + "  cdcl:" + cdclResult + s" ($f)\n")
 
       Await.result(currentLine, Duration.Inf)
     }

@@ -80,7 +80,10 @@ class DPLLSolver extends SATSolvingAlgorithm {
     * Pick a victim literal on which to do the decision.
     */
   def pickVictim(formula: InternalCNF): String = {
-    formula.conjuncts.head.disjuncts.head.literal.name
+    for (d <- formula.conjuncts.head.disjuncts) {
+      if (d.isActive) return d.literal.name
+    }
+    throw new Exception("No victim literal found!")
 //    pickMostOccurringVictim(formula)
   }
 
