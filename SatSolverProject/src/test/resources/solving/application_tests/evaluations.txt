@@ -1,0 +1,10 @@
+nRuns=50 i=10 minutes
+dp:1.28  dpll:0.26 (test01.smt2)
+dp:2.04  dpll:1.6 (test02.smt2)
+dp:0.12  dpll:0.04 (test03.smt2)
+dp:0.04  dpll:0.04 (test04.smt2)
+dp:0.12  dpll:0.16 (test05.smt2)
+dp:0.12  dpll:0.02 (test06.smt2)
+dp:0.12  dpll:0.08 (test07.smt2)
+dp:0.26  dpll:0.06 (test08.smt2)
+dp:0.36  dpll:0.2 (test09.smt2)

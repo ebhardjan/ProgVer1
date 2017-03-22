@@ -41,7 +41,7 @@ class DPLLSolverTest extends FunSuite {
     */
   test("dummy_test") {
     // paste number of failing test here to debug manually
-    val testNr = "07"
+    val testNr = "05"
 
     val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
     val dPLLSolver = new DPLLSolver
