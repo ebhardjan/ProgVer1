@@ -62,6 +62,7 @@ object MySATSolver {
       algoString match {
         case "/dp" => new DPSolver
         case "/dpll" => new DPLLSolver
+        case "/cdcl" => new CDCLSolver
         case _ => abortExecution(s"Invalid algorithm selection: $algoString")
       }
     }
