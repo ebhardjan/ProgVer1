@@ -18,11 +18,13 @@ object CNFConversionTestUtils {
     */
   def formulasEqual(formula1: Term, formula2: Term): Boolean = {
     val one = And(formula1, Not(formula2))
-    val filename1 = Smt2FileUtils.writeFormulaToSmt2File(one, "tmp.smt2", getModel = false)
+    val filename1 = "tmp.smt2"
+    Smt2FileUtils.writeFormulaToSmt2File(one, filename1, getModel = false)
     val res1 = "z3 -smt2 " + filename1 !!
 
     val two = And(Not(formula1), formula2)
-    val filename2 = Smt2FileUtils.writeFormulaToSmt2File(two, "tmp.smt2", getModel = false)
+    val filename2 = "tmp2.smt2"
+    Smt2FileUtils.writeFormulaToSmt2File(two, filename2, getModel = false)
     val res2 = "z3 -smt2 " + filename2 !!
 
     res1.contains("unsat") || res2.contains("unsat")

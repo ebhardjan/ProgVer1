@@ -18,9 +18,11 @@ object SolverTestUtils {
     */
   def checkSATResult(result: Option[Map[String, Boolean]], formula: Term): Boolean = {
     result match {
-      case None => val filename1 = Smt2FileUtils.writeFormulaToSmt2File(formula, "tmp.smt2", getModel = false)
-          val z3result: String = "z3 -smt2 " + filename1 !!;
-          z3result.contains("unsat")
+      case None =>
+        val filename = "tmp.smt2"
+        Smt2FileUtils.writeFormulaToSmt2File(formula, filename, getModel = false)
+        val z3result: String = "z3 -smt2 " + filename !!;
+        z3result.contains("unsat")
       case Some(map) => checkModelForCorrectness(formula, map)
     }
   }

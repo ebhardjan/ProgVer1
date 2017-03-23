@@ -57,14 +57,18 @@ object Smt2FileUtils {
   }
 
   /**
-    * Writes a given formula to the file tmp.smt2
+    * Writes a given formula to a .smt2 file
+    *
+    * @param formula formula to write to the file
+    * @param filepath where to store the formula, if the directory does not exist, it is created
+    * @param getModel whether the smt2 file should contain the (get-model) command or not
+    * @return the path of the
     */
-  def writeFormulaToSmt2File(formula: Term, filepath: String, getModel: Boolean): String = {
+  def writeFormulaToSmt2File(formula: Term, filepath: String, getModel: Boolean): Unit = {
     createDirectoryForFilePathIfNotExists(filepath)
     val pw = new PrintWriter(new File(filepath))
     pw.write(formulaToSmt2String(formula, getModel))
     pw.close()
-    filepath
   }
 
   private def createDirectoryForFilePathIfNotExists(filepath: String): Unit = {
