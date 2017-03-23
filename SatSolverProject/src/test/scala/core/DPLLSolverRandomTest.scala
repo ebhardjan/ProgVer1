@@ -3,16 +3,16 @@ package core
 import org.scalatest.FunSuite
 
 /**
-  * Created by jan on 13.03.17.
+  * Created by jan on 23.03.17.
   *
-  * Tests correctness of CDCL solver algorithm.
+  * Tests correctness of DPLL solver algorithm.
   *
   * Creates new random formulas and tests them, formulas that don't pass the test get stored and will be tested later
-  * again by the CDCLSolverPreviouslyFailingTests test.
+  * again by the DPPLSolverPreviouslyFailingTests test.
   */
-class CDCLSolverRandomTest extends FunSuite {
+class DPLLSolverRandomTest extends FunSuite {
 
-  val folder = "src/test/resources/cdcl_solver/previously_failing/"
+  val folder = "src/test/resources/dpll_solver/previously_failing/"
   val numberOfRandomFormulas = 50
   val storeFailedFormulas = true
 
@@ -28,7 +28,7 @@ class CDCLSolverRandomTest extends FunSuite {
       val formula = CNFConversion.toCNF(generator.generateRandomFormula())
       var correct = false
       try {
-        correct = SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver)
+        correct = SolverValidator.solveFormulaAndValidate(formula, new DPLLSolver)
       } catch {
         case _: Throwable => println("Exception occurred!")
       }
