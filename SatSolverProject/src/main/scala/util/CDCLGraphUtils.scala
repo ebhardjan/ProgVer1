@@ -193,12 +193,7 @@ object CDCLGraphUtils {
     if (graph.children.isEmpty) {
       Set()
     } else {
-      val childrenSet = graph.children ++ {
-        graph match {
-          case _: Any => Seq[GraphNode]()
-        }
-      }
-      childrenSet.foldLeft[Set[GraphNode]](Set())((s, c) => {
+      graph.children.foldLeft[Set[GraphNode]](Set())((s, c) => {
         if (c.equals(needle)) {
           s + graph ++ getParentNodes(c, needle)
         } else {
@@ -287,14 +282,18 @@ object CDCLGraphUtils {
     * @return partial model
     */
   private def getPartialModel(currentRoot: ADecisionLiteral, targetNode: ADecisionLiteral): Map[String, Boolean] = {
+    def _getDecisionImplies(): Map[String, Boolean] = {
+    currentRoot.decisionImplies
+        .foldLeft[Map[String, Boolean]](Map())((acc, n) => acc + (n.varName -> n.varValue))
+    }
+
     if (currentRoot.equals(targetNode)) {
       currentRoot match {
-        case _: RootNode => Map()
-        case _ => Map(currentRoot.varName -> currentRoot.varValue)
+        case _: RootNode => _getDecisionImplies()
+        case _ => Map(currentRoot.varName -> currentRoot.varValue) ++ _getDecisionImplies()
       }
     } else {
-      val decisionImplies: Map[String, Boolean] = currentRoot.decisionImplies
-        .foldLeft[Map[String, Boolean]](Map())((acc, n) => acc + (n.varName -> n.varValue))
+      val decisionImplies: Map[String, Boolean] = _getDecisionImplies()
       currentRoot.children
         .filter(n => n.isInstanceOf[DecisionLiteral])
         .map(n => n.asInstanceOf[DecisionLiteral])

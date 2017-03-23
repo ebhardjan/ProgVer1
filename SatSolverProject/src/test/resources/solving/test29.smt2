@@ -8,8 +8,8 @@
 (declare-fun p2() Bool)
 (assert
 (and
-  (or (not p3) p4 (not p5) (not p5))
-  (or (not p5) (not p1) (not p4) p2)
+  (or p4 (not p5))
+  (or (not p5) (not p1) p2)
   (or (not p3) p4 p5)
   (or (not p3) (not p2))
   (or (not p4) p2 p0)
