@@ -42,9 +42,8 @@ class CDCLSolver extends SATSolvingAlgorithm {
   /**
     * given a decision literal, new assignment and unit clause used for the unit propagation, find all the nodes that
     * were previously in the unit clause and add edges for them in the graph.
-    * TODO: why just the ones in the unit clause? Shouldn't it be all of literals in the clauses that contained the ?
     */
-  def digestUnitPropagation(lastNode: ADecisionLiteral, r: (String, Boolean), unitClause: InternalClause): Unit = {
+  def digestUnitPropagation(lastNode: ADecisionLiteral, r: (String, Boolean), unitClauses: Set[InternalClause]): Unit = {
     val newNode = NonDecisionLiteral(r._1, r._2, lastNode)
 
     // add the node to the implications of the last decision literal
@@ -52,12 +51,12 @@ class CDCLSolver extends SATSolvingAlgorithm {
 
     // find all the nodes that were previously in the clause, take their negation and add edges from them to the new
     // node in case they exist.
-    val previouslyRemovedLiterals = unitClause.disjuncts.filter(d => !d.isActive)
+    val previouslyRemovedLiterals = unitClauses.foldLeft[Set[InternalLiteral]](Set())(
+      (acc, u) => acc ++ u.disjuncts.filter(d => !d.isActive).map(d => d.literal))
     if (previouslyRemovedLiterals.isEmpty) {
       graph.addChild(newNode)
     } else {
       previouslyRemovedLiterals
-        .map(l => l.literal)
         .map(l => CDCLGraphUtils.findNode(graph, InternalLiteral(!l.polarity, l.name)))
         .collect({ case Some(n) => n })
         .foreach(n => n.addChild(newNode))
@@ -85,7 +84,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
       case None =>
     }
     applyUnitPropagation(lastNode.formula) match {
-      case Some((f, r, unitClause)) =>
+      case Some((f, r, unitClauses)) =>
         var formula = f
         // in case we have empty disjuncts now, also apply unit propagation on the negation of r
         if (f.conjuncts.exists(c => !c.disjuncts.exists(d => d.isActive))) {
@@ -106,9 +105,9 @@ class CDCLSolver extends SATSolvingAlgorithm {
           // we need to pass on the new formula, so that we can later pick the correct next decision literal!
           formula = res._1
         }
-        digestUnitPropagation(lastNode, r, unitClause)
+        digestUnitPropagation(lastNode, r, unitClauses)
         lastNode.formula = formula
-        GraphVisualizer.writeXdot(graph)
+        // GraphVisualizer.writeXdot(graph)
         runToComplete(lastNode)
       case None =>
     }
