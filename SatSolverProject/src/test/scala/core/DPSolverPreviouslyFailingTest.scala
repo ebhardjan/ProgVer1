@@ -1,6 +1,7 @@
 package core
 
 import org.scalatest.FunSuite
+import util.Smt2FileUtils
 
 /**
   * Created by Severin on 2017-03-07.
@@ -18,7 +19,7 @@ class DPSolverPreviouslyFailingTest extends FunSuite {
     */
   for (f <- TestUtils.getListOfSmt2Files(folder)) {
     test("previouslyFailing_" + f) {
-      val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
+      val formula = Smt2FileUtils.readSmt2File(folder, f.split(".smt2")(0))
       assert(SolverValidator.solveFormulaAndValidate(formula, new DPSolver))
     }
   }
@@ -30,7 +31,7 @@ class DPSolverPreviouslyFailingTest extends FunSuite {
     // paste uuid of failing test here to debug manually
     val uuid = "306ac934-58f6-42c8-935d-4ea6321f1fe0"
 
-    val formula = CNFConversionTestUtils.readSmt2File(folder, uuid)
+    val formula = Smt2FileUtils.readSmt2File(folder, uuid)
     assert(SolverValidator.solveFormulaAndValidate(formula, new DPSolver))
   }
 }

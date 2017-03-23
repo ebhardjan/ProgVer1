@@ -1,7 +1,7 @@
 package core
 
 import smtlib.parser.Terms.Term
-import util.{CNFRepresentation, SolverUtils}
+import util.{CNFRepresentation, Smt2FileUtils, SolverUtils}
 
 import sys.process._
 
@@ -18,7 +18,7 @@ object SolverTestUtils {
     */
   def checkSATResult(result: Option[Map[String, Boolean]], formula: Term): Boolean = {
     result match {
-      case None => val filename1 = CNFConversionTestUtils.writeFormulaToSmt2File(formula, "tmp.smt2", getModel = false)
+      case None => val filename1 = Smt2FileUtils.writeFormulaToSmt2File(formula, "tmp.smt2", getModel = false)
           val z3result: String = "z3 -smt2 " + filename1 !!;
           z3result.contains("unsat")
       case Some(map) => checkModelForCorrectness(formula, map)

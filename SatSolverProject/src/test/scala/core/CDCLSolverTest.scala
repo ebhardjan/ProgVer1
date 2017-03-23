@@ -3,6 +3,7 @@ package core
 import java.io.File
 
 import org.scalatest.FunSuite
+import util.Smt2FileUtils
 
 /**
   * Created by jan on 09.03.17.
@@ -30,7 +31,7 @@ class CDCLSolverTest extends FunSuite {
     */
   for (f <- getListOfSmt2Files(folder)) {
     test("cdcl_solver_" + f) {
-      val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
+      val formula = Smt2FileUtils.readSmt2File(folder, f.split(".smt2")(0))
       assert(SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver))
     }
   }
@@ -42,7 +43,7 @@ class CDCLSolverTest extends FunSuite {
     // paste number of failing test here to debug manually
     val testNr = "20"
 
-    val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
+    val formula = Smt2FileUtils.readSmt2File(folder, "test" + testNr)
     assert(SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver))
   }
 }
