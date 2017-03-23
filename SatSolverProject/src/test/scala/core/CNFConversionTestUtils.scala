@@ -64,10 +64,22 @@ object CNFConversionTestUtils {
     * Writes a given formula to the file tmp.smt2
     */
   def writeFormulaToSmt2File(formula: Term, filepath: String, getModel: Boolean): String = {
+    createDirectoryForFilePathIfNotExists(filepath)
     val pw = new PrintWriter(new File(filepath))
     pw.write(formulaToSmt2String(formula, getModel))
     pw.close()
     filepath
+  }
+
+  private def createDirectoryForFilePathIfNotExists(filepath: String): Unit = {
+    val lastIndexOfDirectorySubString = filepath.lastIndexOf("/")
+    if (lastIndexOfDirectorySubString > 0) {
+      val dirName = filepath.substring(0, lastIndexOfDirectorySubString)
+      val directory = new File(dirName)
+      if (!directory.exists()) {
+        directory.mkdir()
+      }
+    }
   }
 
   /**
