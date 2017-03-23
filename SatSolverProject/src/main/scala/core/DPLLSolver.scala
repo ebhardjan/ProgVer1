@@ -80,11 +80,11 @@ class DPLLSolver extends SATSolvingAlgorithm {
     * Pick a victim literal on which to do the decision.
     */
   def pickVictim(formula: InternalCNF): String = {
-    for (d <- formula.conjuncts.head.disjuncts) {
-      if (d.isActive) return d.literal.name
-    }
-    throw new Exception("No victim literal found!")
-//    pickMostOccurringVictim(formula)
+//    for (d <- formula.conjuncts.head.disjuncts) {
+//      if (d.isActive) return d.literal.name
+//    }
+//    throw new Exception("No victim literal found!")
+    pickMostOccurringVictim(formula)
   }
 
   /**
@@ -93,7 +93,7 @@ class DPLLSolver extends SATSolvingAlgorithm {
   def pickMostOccurringVictim(formula: InternalCNF): String = {
     val varOccurrenceMap: mutable.Map[String, Int] = mutable.Map()
     for (c <- formula.conjuncts) {
-      for (d <- c.disjuncts; l = d.literal) {
+      for (d <- c.disjuncts if d.isActive; l = d.literal) {
         varOccurrenceMap.getOrElse(l.name, None) match {
           case None => varOccurrenceMap.put(l.name, 1)
           case occurrences: Int => varOccurrenceMap(l.name) = occurrences + 1
