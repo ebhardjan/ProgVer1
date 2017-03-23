@@ -16,14 +16,21 @@ def evaluate(files):
     outFile = open(TARGET_FILE, 'w')
     linePattern = re.compile(
         "dp:(([0-9]*.[0-9*])|x|i)  dpll:(([0-9]*.[0-9*])|x|i)  cdcl:(([0-9]*.[0-9*])|x|i) \(.*\)")
-    for file in files:
+    for i,file in enumerate(files):
         print("Evaluating file: " + str(file))
         result = subprocess.check_output(
             'sbt "run /eval ' + str(file) + '"', shell=True).decode('utf-8')
         resultLines = result.split('\n')
+        # Extract number of runs and max runtime on the first run.
+        if (i == 0):
+            niPattern = re.compile("nRuns=([0-9]*) i=(.*)")
+            for line in resultLines:
+                niMatch = niPattern.match(line)
+                if niMatch:
+                    outFile.write(niMatch.group(0) + '\n')
+        # Extract the time measurements from all the prints the program made.
         for line in resultLines:
-            lineMatch = linePattern.match(line)
-            if lineMatch:
+            if linePattern.match(line):
                 outFile.write(line + '\n')
 
 def main():

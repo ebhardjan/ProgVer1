@@ -1,7 +1,5 @@
 package core
 
-import java.io.{File, PrintWriter}
-
 import smtlib.parser.Commands._
 import smtlib.parser.Terms.Term
 import util.PropositionalLogic
@@ -19,7 +17,7 @@ object AlgorithmEvaluator {
   // Specify number of runs over which the runtime should be averaged.
   val nRuns: Int = 10
   // Specify maximum time to let the algorithm run before giving up and specifying runtime as 'i'.
-  val maxRuntime: FiniteDuration = 1 seconds
+  val maxRuntime: FiniteDuration = 10 seconds
 
   private def readFormulaFile(path: String): Term = {
     val inputString: String = {
@@ -79,6 +77,8 @@ object AlgorithmEvaluator {
         CNFConversion.toCNF(formula)
       }
     }
+
+    println(s"nRuns=$nRuns i=${maxRuntime.toString()}")
 
     val dpFuture: Future[String] = Future {
 //      println(s"Running DP on $formulaFile")
