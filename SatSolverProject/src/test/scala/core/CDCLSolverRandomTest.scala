@@ -25,9 +25,7 @@ class CDCLSolverRandomTest extends FunSuite {
   val generator = new RandomCNFGenerator(numberOfVariables, maxChildCount, minDepth, maxDepth)
   for (i <- 1 to numberOfRandomFormulas) {
     test("newRandomFormula_" + i) {
-      //TODO why does our CNF conversion not work with some of those cases?
-      //val formula = CNFConversion.toCNF(generator.generateRandomFormula())
-      val formula = generator.generateRandomFormula()
+      val formula = CNFConversion.toCNF(generator.generateRandomFormula())
       var correct = false
       try {
         correct = SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver)

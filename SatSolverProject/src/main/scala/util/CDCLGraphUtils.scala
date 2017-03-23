@@ -193,12 +193,7 @@ object CDCLGraphUtils {
     if (graph.children.isEmpty) {
       Set()
     } else {
-      val childrenSet = graph.children ++ {
-        graph match {
-          case _: Any => Seq[GraphNode]()
-        }
-      }
-      childrenSet.foldLeft[Set[GraphNode]](Set())((s, c) => {
+      graph.children.foldLeft[Set[GraphNode]](Set())((s, c) => {
         if (c.equals(needle)) {
           s + graph ++ getParentNodes(c, needle)
         } else {
