@@ -13,3 +13,6 @@ out
 # temporary file that is used in the CNF conversion
 tmp.smt2
 
+# temporary file that is used to save the cdcl graph as a dot file and dispaly it
+tmp.dot
+

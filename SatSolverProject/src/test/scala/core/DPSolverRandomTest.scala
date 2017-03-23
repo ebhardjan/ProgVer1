@@ -17,16 +17,21 @@ class DPSolverRandomTest extends FunSuite {
   val storeFailedFormulas = true
 
   // random formula generator parameters
-  val numberOfVariables = 50
-  val maxChildCount = 25
-  val minDepth = 4
-  val maxDepth = 8
+  val numberOfVariables = 6
+  val numberOfClauses = 25
+  val minLiteralCount = 2
+  val maxLiteralCount = 4
 
-  val generator = new RandomFormulaGenerator(numberOfVariables, maxChildCount, minDepth, maxDepth)
+  val generator = new RandomCNFGenerator(numberOfVariables, numberOfClauses, minLiteralCount, maxLiteralCount)
   for (i <- 1 to numberOfRandomFormulas) {
     test("newRandomFormula_" + i) {
       val formula = CNFConversion.toCNF(generator.generateRandomFormula())
-      val correct = SolverValidator.solveFormulaAndValidate(formula, new DPSolver)
+      var correct = false
+      try {
+        correct = SolverValidator.solveFormulaAndValidate(formula, new DPSolver)
+      } catch {
+        case _: Throwable => println("Exception occurred!")
+      }
       if (!correct && storeFailedFormulas) {
         // write formula to file
         CNFConversionTestUtils.writeFormulaToSmt2File(formula,
