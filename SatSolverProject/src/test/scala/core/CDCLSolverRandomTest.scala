@@ -1,6 +1,7 @@
 package core
 
 import org.scalatest.FunSuite
+import util.{RandomCNFGenerator, Smt2FileUtils}
 
 /**
   * Created by jan on 13.03.17.
@@ -34,7 +35,7 @@ class CDCLSolverRandomTest extends FunSuite {
       }
       if (!correct && storeFailedFormulas) {
         // write formula to file
-        CNFConversionTestUtils.writeFormulaToSmt2File(formula,
+        Smt2FileUtils.writeFormulaToSmt2File(formula,
           folder + java.util.UUID.randomUUID.toString + ".smt2", getModel = true)
       }
       assert(correct)

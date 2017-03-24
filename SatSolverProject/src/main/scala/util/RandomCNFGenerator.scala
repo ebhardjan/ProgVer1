@@ -1,7 +1,6 @@
-package core
+package util
 
 import smtlib.parser.Terms.Term
-import util.PropositionalLogic
 
 /**
   * Created by jan on 17.03.17.
@@ -38,10 +37,10 @@ class RandomCNFGenerator(numberOfVariables: Int,
   }
 
   def generateRandomFormula(): Term = {
-    val declarationsString = CNFConversionTestUtils.smt2Declarations((0 to numberOfVariables).map(i => "p" + i))
+    val declarationsString = Smt2FileUtils.smt2Declarations((0 to numberOfVariables).map(i => "p" + i))
     val formulaString = stringFormula()
-    val smt2String = CNFConversionTestUtils.createSmt2String(declarationsString, formulaString, getModel = true)
-    val formula = CNFConversionTestUtils.smt2StringToFormula(smt2String)
+    val smt2String = Smt2FileUtils.createSmt2String(declarationsString, formulaString, getModel = true)
+    val formula = Smt2FileUtils.smt2StringToFormula(smt2String)
     assert(PropositionalLogic.isPropositional(formula))
     assert(PropositionalLogic.isCNF(formula))
 
