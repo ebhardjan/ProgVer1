@@ -1,6 +1,7 @@
 package core
 
 import org.scalatest.FunSuite
+import util.Smt2FileUtils
 
 /**
   * Created by jan on 06.03.17.
@@ -18,7 +19,7 @@ class CNFConversionPreviouslyFailingTests extends FunSuite {
     */
   for (f <- TestUtils.getListOfSmt2Files(folder)) {
     test("previouslyFailing_" + f) {
-      val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
+      val formula = Smt2FileUtils.readSmt2File(folder, f.split(".smt2")(0))
       assert(CNFConversionValidator.convertToCnfAndValidate(formula))
     }
   }
@@ -30,7 +31,7 @@ class CNFConversionPreviouslyFailingTests extends FunSuite {
     // paste uuid of failing test here to debug manually
     val uuid = "04effc19-193a-47a9-89f1-64167bd8f36f"
 
-    val formula = CNFConversionTestUtils.readSmt2File(folder, uuid)
+    val formula = Smt2FileUtils.readSmt2File(folder, uuid)
     assert(CNFConversionValidator.convertToCnfAndValidate(formula))
   }
 

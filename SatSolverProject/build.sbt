@@ -17,3 +17,8 @@ val main = Project(id = "SatSolverProject", base = file(".")).dependsOn(scalasmt
 
 // z3 solver otherwise complains...
 parallelExecution in Test := false
+
+// run the sat solver in case we just run "sbt run"
+mainClass in (Compile, run) := Some("core.MySATSolver")
+
+trapExit := false
