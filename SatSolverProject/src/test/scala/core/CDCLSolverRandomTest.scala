@@ -1,6 +1,7 @@
 package core
 
 import org.scalatest.FunSuite
+import util.{RandomCNFGenerator, Smt2FileUtils}
 
 /**
   * Created by jan on 13.03.17.
@@ -18,11 +19,11 @@ class CDCLSolverRandomTest extends FunSuite {
 
   // random formula generator parameters
   val numberOfVariables = 6
-  val maxChildCount = 25
-  val minDepth = 2
-  val maxDepth = 4
+  val numberOfClauses = 25
+  val minLiteralCount = 2
+  val maxLiteralCount = 4
 
-  val generator = new RandomCNFGenerator(numberOfVariables, maxChildCount, minDepth, maxDepth)
+  val generator = new RandomCNFGenerator(numberOfVariables, numberOfClauses, minLiteralCount, maxLiteralCount)
   for (i <- 1 to numberOfRandomFormulas) {
     test("newRandomFormula_" + i) {
       val formula = CNFConversion.toCNF(generator.generateRandomFormula())
@@ -34,7 +35,7 @@ class CDCLSolverRandomTest extends FunSuite {
       }
       if (!correct && storeFailedFormulas) {
         // write formula to file
-        CNFConversionTestUtils.writeFormulaToSmt2File(formula,
+        Smt2FileUtils.writeFormulaToSmt2File(formula,
           folder + java.util.UUID.randomUUID.toString + ".smt2", getModel = true)
       }
       assert(correct)

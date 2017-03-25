@@ -102,13 +102,15 @@ object SolverUtils {
     * @return The resulting set of clauses.
     */
   def removeLiteralFromClauses(clauses: Set[InternalClause], literal: InternalLiteral): Set[InternalClause] = {
-    clauses.foreach(c =>
-      c.disjuncts.foreach(d =>
-        if (d.literal.equals(literal)) {
-          d.isActive = false
-        })
-    )
-    clauses
+    for (c <- clauses) yield {
+      InternalClause(for (d <- c.disjuncts) yield {
+        if (d.literal == literal) {
+          InternalDisjunct(d.literal, false)
+        } else {
+          d
+        }
+      })
+    }
   }
 
   /**

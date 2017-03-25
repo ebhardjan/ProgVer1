@@ -2,6 +2,7 @@ package core
 
 import org.scalatest.FunSuite
 import smtlib.parser.Terms.Term
+import util.Smt2FileUtils
 
 /**
   * Created by jan on 01.03.17.
@@ -209,7 +210,7 @@ class CNFConversionStagesTest extends FunSuite {
     * returns the formula after applying the "remove implications" step only
     */
   def formulaAfterImplicationRemoval(filename: String): Term = {
-    val formula = CNFConversionTestUtils.readSmt2File(folder, filename)
+    val formula = Smt2FileUtils.readSmt2File(folder, filename)
     CNFConversion.replaceImplication(formula)
   }
 
@@ -217,7 +218,7 @@ class CNFConversionStagesTest extends FunSuite {
     * returns the formula after applying the "push negations inwards" step only
     */
   def formulaAfterNegationPushDown(filename: String): Term = {
-    val formula = CNFConversionTestUtils.readSmt2File(folder, filename)
+    val formula = Smt2FileUtils.readSmt2File(folder, filename)
     CNFConversion.pushDownNegations(formula)
   }
 
@@ -225,7 +226,7 @@ class CNFConversionStagesTest extends FunSuite {
     * returns the formula after applying the "distribute disjuncts over conjuncts" step only
     */
   def formulaAfterDistributeConjunctsOverDisjuncts(filename: String): Term = {
-    val formula = CNFConversionTestUtils.readSmt2File(folder, filename)
+    val formula = Smt2FileUtils.readSmt2File(folder, filename)
     CNFConversion.distributeConjunctionsOverDisjunctions(formula)
   }
 
@@ -233,7 +234,7 @@ class CNFConversionStagesTest extends FunSuite {
     * returns the formula after applying the "remove top and bottom" step only
     */
   def formulaAfterTopAndBottomRemoval(filename: String): Term = {
-    val formula = CNFConversionTestUtils.readSmt2File(folder, filename)
+    val formula = Smt2FileUtils.readSmt2File(folder, filename)
     CNFConversion.removeTopAndBottom(formula)
   }
 
@@ -243,7 +244,7 @@ class CNFConversionStagesTest extends FunSuite {
     * @return
     */
   def formulaAfterDuplicateElimination(filename: String): Term = {
-    val formula = CNFConversionTestUtils.readSmt2File(folder, filename)
+    val formula = Smt2FileUtils.readSmt2File(folder, filename)
     CNFConversion.removeDuplicateClausesAndDuplicateLiterals(formula)
   }
 
@@ -253,7 +254,7 @@ class CNFConversionStagesTest extends FunSuite {
     * @return
     */
   def formulaAfterFlattening(filename: String): Term = {
-    val formula = CNFConversionTestUtils.readSmt2File(folder, filename)
+    val formula = Smt2FileUtils.readSmt2File(folder, filename)
     CNFConversion.flatten(formula)
   }
 

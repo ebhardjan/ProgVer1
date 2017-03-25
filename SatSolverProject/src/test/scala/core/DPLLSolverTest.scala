@@ -3,6 +3,7 @@ package core
 import java.io.File
 
 import org.scalatest.FunSuite
+import util.Smt2FileUtils
 
 /**
   * Created by Severin on 2017-03-09.
@@ -30,9 +31,8 @@ class DPLLSolverTest extends FunSuite {
     */
   for (f <- getListOfSmt2Files(folder)) {
     test("dpll_solver_" + f) {
-      val formula = CNFConversionTestUtils.readSmt2File(folder, f.split(".smt2")(0))
-      val dPLLSolver = new DPLLSolver
-      assert(SolverValidator.solveFormulaAndValidate(formula, dPLLSolver))
+      val formula = Smt2FileUtils.readSmt2File(folder, f.split(".smt2")(0))
+      assert(SolverValidator.solveFormulaAndValidate(formula, new DPLLSolver))
     }
   }
 
@@ -43,8 +43,7 @@ class DPLLSolverTest extends FunSuite {
     // paste number of failing test here to debug manually
     val testNr = "05"
 
-    val formula = CNFConversionTestUtils.readSmt2File(folder, "test" + testNr)
-    val dPLLSolver = new DPLLSolver
-    assert(SolverValidator.solveFormulaAndValidate(formula, dPLLSolver))
+    val formula = Smt2FileUtils.readSmt2File(folder, "test" + testNr)
+    assert(SolverValidator.solveFormulaAndValidate(formula, new DPLLSolver))
   }
 }
