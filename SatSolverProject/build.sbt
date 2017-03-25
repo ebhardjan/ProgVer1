@@ -20,3 +20,5 @@ parallelExecution in Test := false
 
 // run the sat solver in case we just run "sbt run"
 mainClass in (Compile, run) := Some("core.MySATSolver")
+
+trapExit := false

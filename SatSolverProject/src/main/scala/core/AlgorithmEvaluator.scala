@@ -15,9 +15,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 object AlgorithmEvaluator {
   // Specify number of runs over which the runtime should be averaged.
-  val nRuns: Int = 10
+  val nRuns: Int = 5
   // Specify maximum time to let the algorithm run before giving up and specifying runtime as 'i'.
-  val maxRuntime: FiniteDuration = 10 seconds
+  val maxRuntime: FiniteDuration = 20 seconds
 
   private def readFormulaFile(path: String): Term = {
     val inputString: String = {
@@ -91,7 +91,7 @@ object AlgorithmEvaluator {
 //      println(s"Running DPLL on $formulaFile")
       averagedAlgorithmRuns(cnf, new DPLLSolver, nRuns)
     }
-
+    Await.result(dpllFuture, Duration.Inf)
     val cdclFuture: Future[String] = Future {
 //      println(s"Running CDCL on $formulaFile")
       averagedAlgorithmRuns(cnf, CDCLSolverWrapper, nRuns)

@@ -2,7 +2,7 @@ from pathlib import Path
 import subprocess
 import re
 
-SRC_FOLDER = "src/test/resources/solving"
+SRC_FOLDER = "5sat"
 TARGET_FILE = SRC_FOLDER + "/evaluations.txt"
 
 def getFiles(folder):
@@ -18,8 +18,12 @@ def evaluate(files):
         "dp:(([0-9]*.[0-9*])|x|i)  dpll:(([0-9]*.[0-9*])|x|i)  cdcl:(([0-9]*.[0-9*])|x|i) \(.*\)")
     for i,file in enumerate(files):
         print("Evaluating file: " + str(file))
-        result = subprocess.check_output(
-            'sbt "run /eval ' + str(file) + '"', shell=True).decode('utf-8')
+        try:
+            result = subprocess.check_output(
+                'sbt "run /eval ' + str(file) + '"', shell=True).decode('utf-8')
+        except:
+            outFile.write("Error evaluating " + str(file) + "\n")
+            continue
         resultLines = result.split('\n')
         # Extract number of runs and max runtime on the first run.
         if (i == 0):
@@ -31,6 +35,7 @@ def evaluate(files):
         # Extract the time measurements from all the prints the program made.
         for line in resultLines:
             if linePattern.match(line):
+                print("Results: " + line)
                 outFile.write(line + '\n')
 
 def main():
