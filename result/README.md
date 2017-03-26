@@ -15,7 +15,7 @@ which are unsat. We will now look at the results in more detail.
 ### 3sat
 
 For 3sat the set of the number of variables we used was
-[3,5,8,10,15,20,25,30,40,50,60,70,80,90,100,120]. The number of clauses increase
+\[3,5,8,10,15,20,25,30,40,50,60,70,80,90,100,120\]. The number of clauses increase
 accordingly. So for each of those values we generated 10 satisfiable and 10
 unsatisfiable formulas, giving a total number of 320 formulas. We let each
 algorithm run twice on each formula, to then average the runtime. We set a
@@ -29,7 +29,9 @@ The following graph shows the result of the experiments:
 ![](3sat_allresults_2runs_i20s.png)
 
 The x axis shows the number of variables of the formula, the y axis the runtime
-in milliseconds on a logarithmic scale.
+in milliseconds on a logarithmic scale. Note that the x axis is not a linear
+scale, but rather staying at a value for 20 runs, then jumping to the next
+number of variables.
 
 The first thing we notice, is that all algorithms show an exponential increase
 of the runtime with increasing number of variables. Surprisingly DPLL performs
@@ -38,6 +40,13 @@ with rather small numbers of variables, so the overhead of maintaining the graph
 is quite high. The algorithmic advantage would probably show up on larger
 formulas, but the general performance of our solver can't handle those in
 reasonable timeframes.
+Another reason might be that since we are dealing with random formulas here,
+the advantage of clause learning is very small.
+Also we should mention that in DPLL whenever we have to make a decision on which
+literal to branch off, we pick the one which appears most often in the formula.
+This is a rather simple heuristic, but might still bring a large advantage over
+CDCL, where we just pick the first occurring one. The reasoning was that with
+learning we would converge quickly anyway, but this seems not to cancel out.
 
 DP can keep up to formulas with around 20 variables and 90 clauses before
 going over the 20 second limit. CDCL goes up to about 50, DPLL to 80.
@@ -62,7 +71,7 @@ advantage over DP. This is because ???Jan???.
 ### 5sat
 
 For 5sat we used the same set of number of variables, but only went up to 50
-([3,5,8,10,15,20,25,30,40,50]). Since there are fewer formulas to test, we
+(\[3,5,8,10,15,20,25,30,40,50\]). Since there are fewer formulas to test, we
 averaged each formula over 5 runs, while keeping the timeout at 20 seconds.
 
 Here are the results:
@@ -102,9 +111,33 @@ In order to get some more realistic problems to test our solver with, we took
 some benchmarks from the
 [SATLIB - Benchmark Problems](http://www.cs.ubc.ca/~hoos/SATLIB/benchm.html).
 From the subsection "DIMACS Benchmark Instances" we picked two categories:
-- parity - 20 formulas, all satisfiable
-- inductive inference - 41 formulas, all satisfiable
+-   parity - 20 formulas, all satisfiable
+-   inductive inference - 41 formulas, all satisfiable
 
-Both categories include formulas of increasing size.
+Both categories include formulas of increasing size. We had trouble running even
+the smallest instances of those problems. We ran the experiments with a timeout
+of ten seconds.
+
+In case of parity we managed to solve 8 out of the 10 smallest
+instances using DPLL with an average runtime of 1.5 seconds. Both DP and CDCL
+didn't manage to solve a single one.
+
+For the inductive inference problems it looks even worse. We solved the smallest
+instance with DPLL in about 250ms, with CDCL in about 400ms on average. No other
+instances were solved within the timeout.
 
 ## Conclusion
+
+We found that CDCL is significantly slower than DPLL on our test cases. We
+mentioned a couple of reasons why this could be, but the result is still
+surprising.
+
+Less surprising is that DP can't keep up with either of the other two
+algorithms. We noticed when testing with longer timeouts, that on slightly large
+formulas DP will fail because it runs out of memory. In testing it took around
+six minutes until it filled all the four gigabytes of the JVM.
+
+All in all the performance of our SAT solver is pretty underwhelming. We didn't
+do much in the way of optimizing performance. We don't use any smart heuristics
+for quicker convergence, and the scala implementation is designed more to be
+readable and correct, rather than optimized for performance.
