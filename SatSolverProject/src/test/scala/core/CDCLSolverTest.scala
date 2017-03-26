@@ -24,9 +24,9 @@ class CDCLSolverTest extends FunSuite {
   /**
     * for debugging...
     */
-  ignore("dummy_test") {
+  test("dummy_test") {
     // paste number of failing test here to debug manually
-    val testNr = "20"
+    val testNr = "12"
 
     val formula = Smt2FileUtils.readSmt2File(folder, "test" + testNr)
     assert(SolverValidator.solveFormulaAndValidate(formula, new CDCLSolver))

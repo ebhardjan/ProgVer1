@@ -3,6 +3,8 @@ package core
 import smtlib.parser.Terms.Term
 import util._
 
+import scala.collection.mutable
+
 /**
   * Created by jan on 09.03.17.
   */
@@ -240,13 +242,36 @@ class CDCLSolver extends SATSolvingAlgorithm {
     */
   private def pickDecisionLiteral(formula: InternalCNF, model: Map[String, Boolean]): InternalLiteral = {
     val possibleDecisionLiterals =
-      formula.conjuncts.foldLeft[Set[InternalDisjunct]](Set())(
+      formula.conjuncts
+        .foldLeft[Set[InternalDisjunct]](Set())(
         (s, d) => s ++ d.disjuncts.filter(d => d.isActive).filter(d => !model.contains(d.literal.name)))
+        .map(l => l.literal)
     if (possibleDecisionLiterals.isEmpty) {
       throw new IllegalStateException("Could not pick a decision literal! Formula: " + formula)
     } else {
-      possibleDecisionLiterals.head.literal
+      getMostOccurringLiteral(formula, possibleDecisionLiterals)
     }
+  }
+
+  private def getMostOccurringLiteral(formula: InternalCNF, possibleDecisionLiterals: Set[InternalLiteral]): _root_.util.InternalLiteral = {
+    val varOccurrenceMap: mutable.Map[String, Int] = mutable.Map()
+    // initialize the map with zero counts
+    possibleDecisionLiterals.foreach(l =>
+      varOccurrenceMap.getOrElse(l.name, None) match {
+        case None => varOccurrenceMap.put(l.name, 0)
+        case _ =>
+      })
+
+    // go through formula and update the counts of the map
+    for (c <- formula.conjuncts) {
+      for (d <- c.disjuncts if d.isActive; l = d.literal) {
+        varOccurrenceMap.getOrElse(l.name, None) match {
+          case None => throw new IllegalStateException("map not correctly initialized")
+          case occurrences: Int => varOccurrenceMap(l.name) = occurrences + 1
+        }
+      }
+    }
+    InternalLiteral(polarity = true, varOccurrenceMap.toSeq.minBy(-_._2)._1)
   }
 
 }
