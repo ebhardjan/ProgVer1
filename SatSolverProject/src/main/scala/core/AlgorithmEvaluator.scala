@@ -1,7 +1,5 @@
 package core
 
-import java.io.{File, PrintWriter}
-
 import smtlib.parser.Commands._
 import smtlib.parser.Terms.Term
 import util.PropositionalLogic
@@ -13,34 +11,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by Severin on 2017-03-16.
   *
-  * Run the test from a folder with all three algorithms, measuring the runtime. Store all the gathered data in a file.
+  * Run all three SAT solving algorithms on a given file and measure runtime of each.
   */
 object AlgorithmEvaluator {
-  val srcFolder: String = "src/test/resources/solving/"
-  val targetFolder: String = "src/test/resources/solving"
-
   // Specify number of runs over which the runtime should be averaged.
-  val nRuns: Int = 1
+  val nRuns: Int = 5
   // Specify maximum time to let the algorithm run before giving up and specifying runtime as 'i'.
-  val maxRuntime: FiniteDuration = 1 second
+  val maxRuntime: FiniteDuration = 20 seconds
 
-  private[this] def getListOfSmt2Files(directoryPath: String): List[String] = {
-    val directory = new File(directoryPath)
-    if (directory.exists && directory.isDirectory) {
-      directory.listFiles
-        .filter(f => f.isFile)
-        .filter(f => f.getName.contains(".smt2") || f.getName.contains(".cnf"))
-        .map(f => f.getName)
-        .toList
-    } else {
-      throw new IllegalStateException("The folder " + directoryPath + " does not exist.")
-    }
-  }
-
-  private def readFormulaFile(folder: String, filename: String): Term = {
-    val path: String = folder + "/" + filename
+  private def readFormulaFile(path: String): Term = {
     val inputString: String = {
-      if(filename.contains(".cnf")) {
+      if(path.contains(".cnf")) {
         MySATSolver.convertDIMACSFileToSMTLIBv2(path)
       } else {
         val source = scala.io.Source.fromFile(path)
@@ -86,49 +67,42 @@ object AlgorithmEvaluator {
     }) / n).toString
   }
 
-  def runExperiments(): String = {
-    val filename: String = targetFolder + "/evaluations.txt"
-    val pw = new PrintWriter(new File(filename))
-
-    pw.write(s"nRuns=$nRuns i=${maxRuntime.toString()}\n")
-
-    for (f <- getListOfSmt2Files(srcFolder)) {
-      println(s"Parsing file $f")
-      val formula = readFormulaFile(srcFolder, f)
-      val cnf = {
-        if (PropositionalLogic.isCNF(formula)) {
-          formula
-        } else {
-          CNFConversion.toCNF(formula)
-        }
+  def runExperiments(formulaFile: String): String = {
+    println(s"Parsing file $formulaFile")
+    val formula = readFormulaFile(formulaFile)
+    val cnf = {
+      if (PropositionalLogic.isCNF(formula)) {
+        formula
+      } else {
+        CNFConversion.toCNF(formula)
       }
-
-      val dpFuture: Future[String] = Future {
-        println(s"Running DP on $f")
-        averagedAlgorithmRuns(cnf, DPSolverWrapper, nRuns)
-      }
-      // use this to make execution sequential
-      Await.result(dpFuture, Duration.Inf)
-
-      val dpllFuture: Future[String] = Future {
-        println(s"Running DPLL on $f")
-        averagedAlgorithmRuns(cnf, new DPLLSolver, nRuns)
-      }
-
-      val cdclFuture: Future[String] = Future {
-        println(s"Running CDCL on $f")
-        averagedAlgorithmRuns(cnf, CDCLSolverWrapper, nRuns)
-      }
-
-      val currentLine = for {
-        dpResult <- dpFuture
-        dpllResult <- dpllFuture
-        cdclResult <- cdclFuture
-      } yield pw.write("dp:" + dpResult + "  dpll:" + dpllResult + "  cdcl:" + cdclResult + s" ($f)\n")
-
-      Await.result(currentLine, Duration.Inf)
     }
-    pw.close()
-    filename
+
+    println(s"nRuns=$nRuns i=${maxRuntime.toString()}")
+
+    val dpFuture: Future[String] = Future {
+//      println(s"Running DP on $formulaFile")
+      averagedAlgorithmRuns(cnf, DPSolverWrapper, nRuns)
+    }
+    // use this to make execution sequential
+    Await.result(dpFuture, Duration.Inf)
+
+    val dpllFuture: Future[String] = Future {
+//      println(s"Running DPLL on $formulaFile")
+      averagedAlgorithmRuns(cnf, new DPLLSolver, nRuns)
+    }
+    Await.result(dpllFuture, Duration.Inf)
+    val cdclFuture: Future[String] = Future {
+//      println(s"Running CDCL on $formulaFile")
+      averagedAlgorithmRuns(cnf, CDCLSolverWrapper, nRuns)
+    }
+
+    val currentLine = for {
+      dpResult <- dpFuture
+      dpllResult <- dpllFuture
+      cdclResult <- cdclFuture
+    } yield "dp:" + dpResult + "  dpll:" + dpllResult + "  cdcl:" + cdclResult + s" ($formulaFile)\n"
+
+    Await.result[String](currentLine, Duration.Inf)
   }
 }
