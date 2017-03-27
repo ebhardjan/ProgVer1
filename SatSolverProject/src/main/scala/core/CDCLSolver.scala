@@ -54,6 +54,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
     */
   def digestUnitPropagation(lastNode: ADecisionLiteral, r: (String, Boolean), unitClauses: Set[InternalClause]): Unit = {
     val newNode = NonDecisionLiteral(r._1, r._2, lastNode)
+    graph.addNode(newNode)
 
     // add the node to the implications of the last decision literal
     lastNode.addDecisionImplication(newNode)
@@ -124,7 +125,8 @@ class CDCLSolver extends SATSolvingAlgorithm {
       applyPureLiteralRule(lastNode.formula, graph.toModel) match {
         case Some((f, r)) =>
           val newNode = NonDecisionLiteral(r._1, r._2, lastNode)
-          lastNode.addChild(newNode)
+          graph.addNode(newNode)
+          lastNode.addDecisionImplication(newNode)
           lastNode.formula = f
           runToComplete(lastNode)
         case None =>
@@ -194,6 +196,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
             CDCLGraphUtils.findNode(graph, InternalLiteral(!newVarValue, newVarName)).isEmpty &&
             CDCLGraphUtils.hasConflict(graph).isEmpty) {
             val dl = DecisionLiteral(newVarName, newVarValue, newLastNodeParent.formula)
+            graph.addNode(dl)
             val updatedClauses =
               SolverUtils.takeClausesNotContainingLiteral(dl.formula.conjuncts,
                 InternalLiteral(dl.varValue, dl.varName))
@@ -229,6 +232,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
         val updatedFormula =
           InternalCNF(SolverUtils.removeLiteralFromClauses(updatedClauses, decisionLiteral.negation))
         val newNode = DecisionLiteral(decisionLiteral.name, decisionLiteral.polarity, updatedFormula)
+        graph.addNode(newNode)
         lastNode.addChild(newNode)
 
         runCDCL(newNode)
@@ -271,6 +275,8 @@ class CDCLSolver extends SATSolvingAlgorithm {
         }
       }
     }
+
+    // return the literal with the highest count
     InternalLiteral(polarity = true, varOccurrenceMap.toSeq.minBy(-_._2)._1)
   }
 

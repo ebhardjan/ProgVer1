@@ -10,10 +10,18 @@ class CDCLGraphUtilsTest extends FunSuite {
 
   test("hasConflict") {
     val graph: RootNode = RootNode("rootNode", varValue = false, null)
-    graph.addChild(NonDecisionLiteral("a", varValue = false, null))
+
+    val nA = NonDecisionLiteral("a", varValue = false, null)
+    graph.addNode(nA)
+    graph.addChild(nA)
+
+    val a = NonDecisionLiteral("a", varValue = true, null)
+    graph.addNode(a)
 
     val b = NonDecisionLiteral("b", varValue = true, null)
-    b.addChild(NonDecisionLiteral("a", varValue = true, null))
+    graph.addNode(b)
+
+    b.addChild(a)
     graph.addChild(b)
 
     assert(CDCLGraphUtils.hasConflict(graph).get.equals("a"))
@@ -21,10 +29,17 @@ class CDCLGraphUtilsTest extends FunSuite {
 
   test("hasNoConflict") {
     val graph: RootNode = RootNode("rootNode", varValue = false, null)
-    graph.addChild(NonDecisionLiteral("a", varValue = false, null))
+    val nA1 = NonDecisionLiteral("a", varValue = false, null)
+    graph.addNode(nA1)
+    graph.addChild(nA1)
 
     val b = NonDecisionLiteral("b", varValue = true, null)
-    b.addChild(NonDecisionLiteral("a", varValue = false, null))
+    graph.addNode(b)
+
+    val nA2 = NonDecisionLiteral("a", varValue = false, null)
+    graph.addNode(nA2)
+
+    b.addChild(nA2)
     graph.addChild(b)
 
     assert(CDCLGraphUtils.hasConflict(graph).isEmpty)
@@ -167,6 +182,16 @@ class CDCLGraphUtilsTest extends FunSuite {
     val t = DecisionLiteral("t", varValue = true, null)
     val u = NonDecisionLiteral("u", varValue = true, t)
     val notU = NonDecisionLiteral("u", varValue = false, t)
+
+    graph.addNode(n)
+    graph.addNode(p)
+    graph.addNode(r)
+    graph.addNode(notS)
+    graph.addNode(q)
+    graph.addNode(t)
+    graph.addNode(u)
+    graph.addNode(notU)
+
     p.addDecisionImplication(r)
     notS.addDecisionImplication(q)
     t.addDecisionImplication(u)

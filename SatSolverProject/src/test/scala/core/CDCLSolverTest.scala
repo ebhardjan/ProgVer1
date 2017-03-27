@@ -24,7 +24,7 @@ class CDCLSolverTest extends FunSuite {
   /**
     * for debugging...
     */
-  test("dummy_test") {
+  ignore("dummy_test") {
     // paste number of failing test here to debug manually
     val testNr = "12"
 
