@@ -32,9 +32,10 @@ sbt "run path-to-file/sudoku-puzzle.txt /sudoku"
 // solve sudoku puzzel with specific solver (the default sovler is dpll)
 sbt "run path-to-file/sudoku-puzzle.txt /cdcl /sudoku"
 ```
-In the last case it is not necessary to add the `/cnf` flag, it will work with
-both formats. Specifics about running the evaluation can be configured directly
-in the `AlgorithmEvaluator` class, using the `nRuns` and `maxRuntime` constants.
+For the automatic evaluation it is not necessary to add the `/cnf` flag, it will 
+work with both formats. Specifics about running the evaluation can be configured 
+directly in the `AlgorithmEvaluator` class, using the `nRuns` and `maxRuntime` 
+constants.
 
 How to run the tests?
 ---------------------
@@ -50,4 +51,10 @@ The test can be run by invoking sbt in the SatSolverProject folder:
 cd SatSolverProject
 sbt test
 ```
+
+Analysis
+--------
+
+You can find the evaluations and our analysis of the results in the subfolder
+`./result`.
 
