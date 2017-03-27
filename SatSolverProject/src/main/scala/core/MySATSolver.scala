@@ -8,19 +8,47 @@ import util.{PropositionalLogic, Utils}
 // by declaring them inside the object.
 object MySATSolver {
 
+  private def solveSudoku(args: Array[String]): Unit = {
+    val algoString = {
+      args.length match {
+        case 2 => "/dpll"
+        case 3 => args(1)
+        case _ => abortExecution("Invalid arguments.")
+      }
+    }
+
+    val solvedSudoku: Array[Array[Int]] = SudokuSolver.solveSudokuInFile(args(0), algoString.replace("/", ""))
+    SudokuSolver.printIt(solvedSudoku)
+  }
+
   def main(args: Array[String]) {
     // check that a command-line argument was passed (which will be treated as the input String)
-    if(args.length == 0 || args.length > 3) {
-      abortExecution("Invalid arguments. Need 1 to 3 arguments:\n" +
+    if(args.length == 0 || args.length > 4) {
+      abortExecution("Invalid arguments. Need 1 to 4 arguments:\n" +
         "[/cnf]: add this if the file is in .cnf format\n" +
         "<file>: path to the file containing the formula to check (in .smt2 or .cnf format)\n" +
-        "[/dp][/dpll][/cdcl]: add one of those to specify the algorithm to be used in solving.")
+        "[/dp][/dpll][/cdcl]: add one of those to specify the algorithm to be used in solving.\n" +
+        "[/sudoku]: if the the file contains a sudoku puzzle that should be solved with de previously specified algorithm.\n")
     }
 
     // Just run the evaluation and exit the program.
     if(args.length == 2 && args(0) == "/eval") {
       println(AlgorithmEvaluator.runExperiments(args(1)))
       System.exit(0)
+    }
+
+    val isSudoku = {
+      args.length match {
+        case 1 => false
+        case 2 => args(1) == "/sudoku"
+        case 3 => args(2) == "/sudoku"
+        case 4 => false
+      }
+    }
+
+    if (isSudoku) {
+      solveSudoku(args)
+      return
     }
 
     val inputString = {
@@ -68,7 +96,7 @@ object MySATSolver {
     }
 
     // do the sat checking and print result
-    val res = Utils.time(solver.checkSAT(CNFInput))
+    val res = solver.checkSAT(CNFInput)
     println(solver.outputResult(res))
   }
 
