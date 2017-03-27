@@ -1,5 +1,7 @@
 package util
 
+import scala.collection.mutable
+
 /**
   * Created by jan on 12.03.17.
   *
@@ -62,7 +64,7 @@ abstract class GraphNode() {
   override def toString: String = {
     var res: String = ""
     if (!varValue) {
-     res += "!"
+      res += "!"
     }
     res + varName
   }
@@ -107,7 +109,7 @@ abstract class ADecisionLiteral() extends GraphNode() {
 
   def addTriedChild(varName: String, varValue: Boolean): Unit = {
     val literal = InternalLiteral(varValue, varName)
-    if(triedChildNodes.contains(literal)) {
+    if (triedChildNodes.contains(literal)) {
       triedChildNodes += (literal -> (triedChildNodes(literal) + 1))
     } else {
       triedChildNodes += (literal -> 1)
@@ -131,7 +133,22 @@ abstract class ADecisionLiteral() extends GraphNode() {
 case class RootNode(override var varName: String,
                     override var varValue: Boolean,
                     override var formula: InternalCNF)
-  extends ADecisionLiteral() {}
+  extends ADecisionLiteral() {
+
+  var allNodes: mutable.Map[String, GraphNode] = mutable.Map[String, GraphNode]()
+
+  def addNode(node: GraphNode): Unit = {
+    allNodes += (InternalLiteral(node.varValue, node.varName).toString -> node)
+  }
+
+  def removeNode(node: GraphNode): Unit = {
+    allNodes -= InternalLiteral(node.varValue, node.varName).toString
+  }
+
+  override def toModel: Map[String, Boolean] = {
+    (allNodes map { case (_, v) => v.varName -> v.varValue }).toMap
+  }
+}
 
 case class DecisionLiteral(override var varName: String,
                            override var varValue: Boolean,

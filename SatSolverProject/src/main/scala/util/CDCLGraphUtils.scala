@@ -15,31 +15,14 @@ object CDCLGraphUtils {
     */
   def hasConflict(graph: RootNode): Option[String] = {
     var model: Map[String, Boolean] = Map()
-
-    def _internalHasConflict(graph: GraphNode): Option[String] = {
-      // Check the existing model. If there is a variable and it's negation in the graph we have a conflict.
-      if (model.contains(graph.varName) && model(graph.varName) != graph.varValue) {
-        // if we found the conflict return it
-        Some(graph.varName)
+    graph.allNodes foreach { case (_, v) =>
+      if (model.contains(v.varName) && model(v.varName) != v.varValue) {
+        return Some(v.varName)
       } else {
-        // otherwise add the variable value of the current node to the graph and recurse
-        model = model + (graph.varName -> graph.varValue)
-        if (graph.children.isEmpty) {
-          None
-        } else {
-          val conflicts = graph.children.map(c => _internalHasConflict(c)).collect({ case Some(s) => s })
-          if (conflicts.size == 1) {
-            Some(conflicts.head)
-          } else if (conflicts.size > 1) {
-            throw new IllegalStateException("More than one conflict in graph!")
-          } else {
-            None
-          }
-        }
+        model = model + (v.varName -> v.varValue)
       }
     }
-
-    _internalHasConflict(graph)
+    None
   }
 
   /**
@@ -150,7 +133,11 @@ object CDCLGraphUtils {
     if (nextDecisionLiteral != null) {
       deleteAllDecisionLiteralsStartingWithChildOf(root, nextDecisionLiteral)
       // delete all the non decision literals that got implied because of this decision literal
-      nextDecisionLiteral.decisionImplies.foreach(nd => deleteNonDecisionLiteralFromGraph(root, nd.varName, nd.varValue))
+      nextDecisionLiteral.decisionImplies.foreach(nd => {
+        root.removeNode(nd)
+        deleteNonDecisionLiteralFromGraph(root, nd.varName, nd.varValue)
+      })
+      root.removeNode(nextDecisionLiteral)
       parentOfDecisionLiteral.removeChild(nextDecisionLiteral)
     }
   }
@@ -206,23 +193,8 @@ object CDCLGraphUtils {
   /**
     * Returns a node for the literal in the graph
     */
-  def findNode(graph: GraphNode, needle: InternalLiteral): Option[GraphNode] = {
-    if (graph.varName.equals(needle.name) && graph.varValue.equals(needle.polarity)) {
-      Some(graph)
-    } else {
-      if (graph.children.nonEmpty) {
-        val res = graph.children.map(c => findNode(c, needle)).collect({ case Some(n) => n })
-        if (res.size > 1) {
-          throw new IllegalStateException("Graph contains the same element multiple times!")
-        } else if (res.size == 1) {
-          Some(res.iterator.next)
-        } else {
-          None
-        }
-      } else {
-        None
-      }
-    }
+  def findNode(graph: RootNode, needle: InternalLiteral): Option[GraphNode] = {
+    graph.allNodes.get(needle.toString)
   }
 
   /**
@@ -283,7 +255,7 @@ object CDCLGraphUtils {
     */
   private def getPartialModel(currentRoot: ADecisionLiteral, targetNode: ADecisionLiteral): Map[String, Boolean] = {
     def _getDecisionImplies(): Map[String, Boolean] = {
-    currentRoot.decisionImplies
+      currentRoot.decisionImplies
         .foldLeft[Map[String, Boolean]](Map())((acc, n) => acc + (n.varName -> n.varValue))
     }
 
