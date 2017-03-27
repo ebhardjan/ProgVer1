@@ -56,5 +56,5 @@ Analysis
 --------
 
 You can find the evaluations and our analysis of the results in the subfolder
-`./result`.
+[./result](./result).
 
