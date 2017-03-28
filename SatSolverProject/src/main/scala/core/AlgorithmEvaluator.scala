@@ -67,7 +67,7 @@ object AlgorithmEvaluator {
     }) / n).toString
   }
 
-  def runExperiments(formulaFile: String): String = {
+  def runExperiments(formulaFile: String, solverName: String): String = {
     println(s"Parsing file $formulaFile")
     val formula = readFormulaFile(formulaFile)
     val cnf = {
@@ -80,29 +80,21 @@ object AlgorithmEvaluator {
 
     println(s"nRuns=$nRuns i=${maxRuntime.toString()}")
 
-    val dpFuture: Future[String] = Future {
-//      println(s"Running DP on $formulaFile")
-      averagedAlgorithmRuns(cnf, DPSolverWrapper, nRuns)
+    val solver: SATSolvingAlgorithm = solverName match {
+      case "dp" => DPSolverWrapper
+      case "dpll" => new DPLLSolver
+      case "cdcl" => CDCLSolverWrapper
     }
-    // use this to make execution sequential
-    Await.result(dpFuture, Duration.Inf)
+    val result = averagedAlgorithmRuns(cnf, solver, nRuns)
 
-    val dpllFuture: Future[String] = Future {
-//      println(s"Running DPLL on $formulaFile")
-      averagedAlgorithmRuns(cnf, new DPLLSolver, nRuns)
-    }
-    Await.result(dpllFuture, Duration.Inf)
-    val cdclFuture: Future[String] = Future {
-//      println(s"Running CDCL on $formulaFile")
-      averagedAlgorithmRuns(cnf, CDCLSolverWrapper, nRuns)
+    val currentLine = {
+      if (solverName.equals("cdcl")) {
+        f"$solverName:$result ($formulaFile)\n"
+      } else {
+        f"$solverName:$result \n"
+      }
     }
 
-    val currentLine = for {
-      dpResult <- dpFuture
-      dpllResult <- dpllFuture
-      cdclResult <- cdclFuture
-    } yield "dp:" + dpResult + "  dpll:" + dpllResult + "  cdcl:" + cdclResult + s" ($formulaFile)\n"
-
-    Await.result[String](currentLine, Duration.Inf)
+    currentLine
   }
 }

@@ -32,8 +32,8 @@ object MySATSolver {
     }
 
     // Just run the evaluation and exit the program.
-    if(args.length == 2 && args(0) == "/eval") {
-      println(AlgorithmEvaluator.runExperiments(args(1)))
+    if(args.length == 3 && args(0) == "/eval") {
+      println(AlgorithmEvaluator.runExperiments(args(1), args(2).replace("/", "")))
       System.exit(0)
     }
 

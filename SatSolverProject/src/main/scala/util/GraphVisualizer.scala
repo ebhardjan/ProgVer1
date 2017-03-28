@@ -15,17 +15,22 @@ object GraphVisualizer {
     graphNode.toString.replace("!", "n")
   }
 
-  private def getFormula(formula: InternalCNF): String = {
-    if (formula == null) {
-      ""
+  private def getFormula(formula: InternalCNF, printFormula: Boolean): String = {
+    if (printFormula) {
+      if (formula == null) {
+        ""
+      } else {
+        ":\n" +
+          formula.toString
+            .replace("Conjunction", "")
+            .replace("Disjunction", "")
+      }
     } else {
-      formula.toString
-        .replace("Conjunction", "")
-        .replace("Disjunction", "")
+      ""
     }
   }
 
-  def toDot(rootNode: RootNode): String = {
+  def toDot(rootNode: RootNode, formula: Boolean): String = {
 
     var edges: Set[String] = Set()
     var nodes: Set[String] = Set()
@@ -33,11 +38,11 @@ object GraphVisualizer {
     def _toDot(graphNode: GraphNode): Unit = {
       graphNode match {
         case d: RootNode =>
-          nodes += toId(graphNode) + "[label=\""+ graphNode.toString + ":\n" + getFormula(d.formula) + "\", style=dashed, color=red]"
+          nodes += toId(graphNode) + "[label=\""+ graphNode.toString + getFormula(d.formula, formula) + "\", style=dashed, color=red]"
           d.decisionImplies
           .foreach(i => edges += toId(graphNode) + " -> " + toId(i) + " [color=grey, style=dotted]")
         case d: DecisionLiteral =>
-          nodes += toId(graphNode) + "[label=\""+ graphNode.toString + ":\n" + getFormula(d.formula) + "\", style=dashed, color=red]"
+          nodes += toId(graphNode) + "[label=\""+ graphNode.toString + getFormula(d.formula, formula) + "\", style=dashed, color=red]"
           d.decisionImplies
           .foreach(i => edges += toId(graphNode) + " -> " + toId(i) + " [color=grey, style=dotted]")
         case _ =>
@@ -67,14 +72,14 @@ object GraphVisualizer {
       edges.foldLeft("")((acc, e) => acc + e + "\n") + "\n}"
   }
 
-  def displayXdot(rootNode: RootNode): Unit = {
-    writeXdot(rootNode)
+  def displayXdot(rootNode: RootNode, formula: Boolean): Unit = {
+    writeXdot(rootNode, formula)
     "xdot " + filename !
   }
 
-  def writeXdot(rootNode: RootNode): Unit = {
+  def writeXdot(rootNode: RootNode, formula: Boolean): Unit = {
     val pw = new PrintWriter(new File(filename))
-    pw.write(toDot(rootNode))
+    pw.write(toDot(rootNode, formula))
     pw.close()
   }
 
