@@ -21,6 +21,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
   // For debugging purposes, needs to be deactivated for performance tests.
   // The file access massively slows down the solver.
   val writeDotGraph: Boolean = false
+  val addFormulasToGraph: Boolean = false
 
   // Flag to turn on and off the usage of the pure literal rule
   val usePureLiteralRule: Boolean = true
@@ -146,14 +147,14 @@ class CDCLSolver extends SATSolvingAlgorithm {
     */
   def runCDCL(lastNode: ADecisionLiteral): Boolean = {
     if (writeDotGraph) {
-      GraphVisualizer.writeXdot(graph)
+      GraphVisualizer.writeXdot(graph, addFormulasToGraph)
     }
 
     runToComplete(lastNode)
     val conflictVarName = CDCLGraphUtils.hasConflict(graph)
 
     if (writeDotGraph) {
-      GraphVisualizer.writeXdot(graph)
+      GraphVisualizer.writeXdot(graph, addFormulasToGraph)
     }
 
     conflictVarName match {
@@ -219,7 +220,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
     CDCLGraphUtils.addClauseToAllFormulas(graph, learnedClause)
 
     if (writeDotGraph) {
-      GraphVisualizer.writeXdot(graph)
+      GraphVisualizer.writeXdot(graph, addFormulasToGraph)
     }
 
     // just for the new clause that we just learned

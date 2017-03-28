@@ -32,9 +32,9 @@ sbt "run path-to-file/sudoku-puzzle.txt /sudoku"
 // solve sudoku puzzel with specific solver (the default sovler is dpll)
 sbt "run path-to-file/sudoku-puzzle.txt /cdcl /sudoku"
 ```
-For the automatic evaluation it is not necessary to add the `/cnf` flag, it will 
-work with both formats. Specifics about running the evaluation can be configured 
-directly in the `AlgorithmEvaluator` class, using the `nRuns` and `maxRuntime` 
+For the automatic evaluation it is not necessary to add the `/cnf` flag, it will
+work with both formats. Specifics about running the evaluation can be configured
+directly in the `AlgorithmEvaluator` class, using the `nRuns` and `maxRuntime`
 constants.
 
 How to run the tests?
@@ -51,6 +51,16 @@ The test can be run by invoking sbt in the SatSolverProject folder:
 cd SatSolverProject
 sbt test
 ```
+
+How to debug CDCL?
+------------------
+
+To visualize what's going on in CDCL use the GraphVisualizer. In order to turn
+it on switch the ```writeDotGraph``` flag in CDCLSolver. Then open the
+generated tmp.dot file in a dot viewer such as xdot.
+
+![](example_graph.png)
+
 
 Analysis
 --------
