@@ -1,0 +1,7 @@
+nRuns=1 i=30 seconds
+dp:i  dpll:i  cdcl:i (src/test/resources/solving/competition_tests/GreenTao_2-4-4_511.cnf)
+dp:i  dpll:i  cdcl:i (src/test/resources/solving/competition_tests/SAT_instance_N=31.cnf)
+dp:i  dpll:i  cdcl:i (src/test/resources/solving/competition_tests/Composite-024BitPrimes-1.used-as.sat04-861.cnf)
+dp:i  dpll:i  cdcl:i (src/test/resources/solving/competition_tests/mod2-3cage-unsat-9-12.sat05-2587.reshuffled-07.cnf)
+Error evaluating src/test/resources/solving/competition_tests/ccp-s5-facto2.cnf
+dp:i  dpll:i  cdcl:i (src/test/resources/solving/competition_tests/counting-easier-php-012-010.sat05-1172.reshuffled-07.cnf)
