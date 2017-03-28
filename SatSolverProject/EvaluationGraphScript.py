@@ -80,6 +80,8 @@ def xToNVar(x, pos):
 fmt = ticker.FuncFormatter(xToNVar)
 ax.xaxis.set_major_formatter(fmt)
 
+plt.ylim([10,10000])
+
 titleText = "Timeout at " + timeI
 if AGGREGATE_N > 1:
     titleText += "\n Averaged over " + str(AGGREGATE_N) + \

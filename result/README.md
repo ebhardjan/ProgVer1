@@ -17,20 +17,20 @@ which are unsat. We will now look at the results in more detail.
 For 3sat the set of the number of variables we used was
 \[3,5,8,10,15,20,25,30,40,50,60,70,80,90,100,120\]. The number of clauses increase
 accordingly. So for each of those values we generated 10 satisfiable and 10
-unsatisfiable formulas, giving a total number of 320 formulas. We let each
-algorithm run twice on each formula, to then average the runtime. We set a
-timeout of 20 seconds, so if an algorithm took longer than that, we cancelled
-it and would record it as failed (those will just be missing entries in the
-graph). The reason we used this rather small limit, is that even so running all
-the formulas took a standard quadcore desktop computer around 8 hours.
+unsatisfiable formulas, giving a total number of 320 formulas. We then let every
+algorithm run on each formula. We set a timeout of 20 seconds, so if an
+algorithm took longer than that, we cancelled it and would record it as failed
+(those will just be missing entries in the graph). The reason we used this
+rather small limit, is that even so running all the formulas took a standard
+quadcore desktop computer around 8 hours.
 
 The following graph shows the result of the experiments:
 
-![](3sat_allresults_2runs_i20s.png)
+![](3sat_allresults_i20s_v2.png)
 
 The x axis shows the number of variables of the formula, the y axis the runtime
 in milliseconds on a logarithmic scale. Note that the x axis is not a linear
-scale, but rather staying at a value for 20 runs, then jumping to the next
+scale, but rather staying at a value for 20 runs, before jumping to the next
 number of variables.
 
 The first thing we notice, is that all algorithms show an exponential increase
@@ -49,37 +49,33 @@ CDCL, where we just pick the first occurring one. The reasoning was that with
 learning we would converge quickly anyway, but this seems not to cancel out.
 
 DP can keep up to formulas with around 20 variables and 90 clauses before
-going over the 20 second limit. CDCL goes up to about 50, DPLL to 80.
+going over the 20 second limit. DPLL and CDCL go up to about 80.
 
 For the next two graphs, we seperated the satisfiable from the unsatisfiable
 formulas, and only look at the average runtime over the ten formulas of same
 size. We required all ten formulas to have completed in under 20 seconds to
 appear on the graph.
 
-![](3sat_aggregated_10_tests_sat.png) | ![](3sat_aggregated_10_tests_unsat.png)
+![](3sat_aggregated_10_tests_sat_v2.png) | ![](3sat_aggregated_10_tests_unsat_v2.png)
 ---|---
 only sat formulas | only unsat formulas
 
-We can see that in general unsat problems are harder, as we can handle fewer
-variables within the 20 second limit. This is because we can stop the search as
+We can see that in general unsat problems are harder, the average runtime is
+quite a bit higher. This is because we can stop the search as
 soon as we find a valid assignment in sat problems, but in unsat we have to
 explore more.
-
-Other than that we can see that on unsat problems, CDCL seems to lose its
-advantage over DP. This is because ???Jan???.
 
 ### 5sat
 
 For 5sat we used the same set of number of variables, but only went up to 50
-(\[3,5,8,10,15,20,25,30,40,50\]). Since there are fewer formulas to test, we
-averaged each formula over 5 runs, while keeping the timeout at 20 seconds.
+(\[3,5,8,10,15,20,25,30,40,50\]). We again have the timeout at 20 seconds.
 
 Here are the results:
 
-![](5sat_allresults_5runs_i20s.png)
+![](5sat_allresults_i20s_v2.png)
 
 We see a very similar picture as for 3sat, but now we cut out even sooner, at
-about 25 formulas for DPLL and only 15 for DP and CDCL. This is not only because
+about 40 formulas for DPLL and CDCL and only 15 for DP. This is not only because
 we increased the number of literals per clause, but also because we used a
 larger factor to map the number of variables to number of clauses.
 
@@ -139,5 +135,5 @@ six minutes until it filled all the four gigabytes of the JVM.
 
 All in all the performance of our SAT solver is pretty underwhelming. We didn't
 do much in the way of optimizing performance. We don't use any smart heuristics
-for quicker convergence, and the scala implementation is designed more to be
+for quicker convergence, and the Scala implementation is designed more to be
 readable and correct, rather than optimized for performance.
