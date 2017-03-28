@@ -24,18 +24,22 @@ sbt "run path-to-file/filename.smt2 /dp"
 sbt "run path-to-file/filename.smt2 /dpll"
 sbt "run path-to-file/filename.smt2 /cdcl"
 
-// run all three algorithms and print the runtime of each
-sbt "run /eval path-to-file/file"
-
-// solve a sudoku puzzle
-sbt "run path-to-file/sudoku-puzzle.txt /sudoku"
-// solve sudoku puzzel with specific solver (the default sovler is dpll)
-sbt "run path-to-file/sudoku-puzzle.txt /cdcl /sudoku"
+// run all an algorithm on a file with timeout and print the runtime
+sbt "run /eval path-to-file/file /[dp|dpll|cdcl]"
 ```
+
 For the automatic evaluation it is not necessary to add the `/cnf` flag, it will
 work with both formats. Specifics about running the evaluation can be configured
 directly in the `AlgorithmEvaluator` class, using the `nRuns` and `maxRuntime`
 constants.
+
+For solving sudoku puzzles:
+```
+// solve a sudoku puzzle
+sbt "run path-to-file/sudoku-puzzle.txt /sudoku"
+// solve sudoku puzzel with specific solver (the default solver is dpll)
+sbt "run path-to-file/sudoku-puzzle.txt /cdcl /sudoku"
+```
 
 How to run the tests?
 ---------------------
@@ -67,4 +71,3 @@ Analysis
 
 You can find the evaluations and our analysis of the results in the subfolder
 [./result](./result).
-
