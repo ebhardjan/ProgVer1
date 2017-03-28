@@ -32,8 +32,8 @@ object CDCLGraphUtils {
     * @param conflictVarName variable of which we want to find the relevant decision literals
     * @return list of relevant decision literals
     */
-
-  def relevantDecisionLiterals(graph: GraphNode, conflictVarName: String): Seq[DecisionLiteral] = {
+  // TODO optimize here
+  def relevantDecisionLiterals(graph: RootNode, conflictVarName: String): Seq[DecisionLiteral] = {
     def _relevantDecisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
       graph match {
         case d: DecisionLiteral =>
@@ -74,8 +74,7 @@ object CDCLGraphUtils {
     }
 
     node.decisionImplies.exists(n => conflictVarName.equals(n.varName)) ||
-    //node.children.exists(n => conflictVarName.equals(n.varName))
-    _reaches(node)
+      _reaches(node)
   }
 
   /**
@@ -145,19 +144,20 @@ object CDCLGraphUtils {
   /**
     * Deletes a non-decision literal from the graph
     */
-  private def deleteNonDecisionLiteralFromGraph(graph: GraphNode, varName: String, varValue: Boolean): Unit = {
-    graph.children.foreach(c =>
-      if (c.varName.equals(varName) && c.varValue.equals(varValue)) {
-        graph.removeChild(c)
-      }
-    )
-    graph.children.foreach(c => deleteNonDecisionLiteralFromGraph(c, varName, varValue))
+  private def deleteNonDecisionLiteralFromGraph(graph: RootNode, varName: String, varValue: Boolean): Unit = {
+    graph.allNodes foreach { case (_, v) =>
+      v.children.foreach(c =>
+        if (c.varName.equals(varName) && c.varValue.equals(varValue)) {
+          v.removeChild(c)
+        }
+      )
+    }
   }
 
   /**
     * Returns the new claus that is introduced by the graph cut
     */
-  def learnClause(graph: GraphNode, conflictVarName: String): InternalClause = {
+  def learnClause(graph: RootNode, conflictVarName: String): InternalClause = {
     // Cut the graph such that conflicting literals are on one side and all decision literals on the other side
 
     // for now let's just do the most easy thing and just put the conflicts on one side and all the other nodes on the
@@ -176,18 +176,14 @@ object CDCLGraphUtils {
   /**
     * Returns the set of parent nodes given any node in the graph.
     */
-  def getParentNodes(graph: GraphNode, needle: GraphNode): Set[GraphNode] = {
-    if (graph.children.isEmpty) {
-      Set()
-    } else {
-      graph.children.foldLeft[Set[GraphNode]](Set())((s, c) => {
-        if (c.equals(needle)) {
-          s + graph ++ getParentNodes(c, needle)
-        } else {
-          s ++ getParentNodes(c, needle)
-        }
-      })
+  def getParentNodes(graph: RootNode, needle: GraphNode): Set[GraphNode] = {
+    var parents: Set[GraphNode] = Set()
+    graph.allNodes foreach { case (_, v) =>
+      if (v.children.exists(c => c.equals(needle))) {
+        parents += v
+      }
     }
+    parents
   }
 
   /**
@@ -203,25 +199,26 @@ object CDCLGraphUtils {
     * @param learnedClause the new clause we want to just learned and want to add to all formulas
     */
   def addClauseToAllFormulas(root: RootNode, learnedClause: InternalClause): Unit = {
-
-    def _addClauseToAllFormulas(root: RootNode, graph: ADecisionLiteral, learnedClause: InternalClause): Unit = {
-
-      val partialModel = getPartialModel(root, graph)
-      graph.formula = {
-        deactivateAlreadyChosenLiterals(learnedClause, partialModel) match {
-          case Some(f) => InternalCNF(graph.formula.conjuncts + f)
-          case None => graph.formula
+    // TODO: loosing one second here!
+      root.formula = {
+        deactivateAlreadyChosenLiterals(learnedClause, getPartialModel(root, root)) match {
+          case Some(f) => InternalCNF(root.formula.conjuncts + f)
+          case None => root.formula
         }
       }
-      if (graph.children.nonEmpty) {
-        graph.children.foreach {
-          case c: DecisionLiteral => _addClauseToAllFormulas(root, c.asInstanceOf[DecisionLiteral], learnedClause)
+      root.allNodes foreach { case (_, v) =>
+        v match {
+          case graph: DecisionLiteral =>
+            val partialModel = getPartialModel(root, graph)
+            graph.formula = {
+              deactivateAlreadyChosenLiterals(learnedClause, partialModel) match {
+                case Some(f) => InternalCNF(graph.formula.conjuncts + f)
+                case None => graph.formula
+              }
+            }
           case _ =>
         }
       }
-    }
-
-    _addClauseToAllFormulas(root, root, learnedClause)
   }
 
   /**
@@ -247,7 +244,7 @@ object CDCLGraphUtils {
 
   /**
     * traverses the tree starting from the top and collects the parts of the model that we already decided on or are
-    * already given before we made the decision speciefied by targetNode
+    * already given before we made the decision specified by targetNode
     *
     * @param currentRoot root node of the graph
     * @param targetNode  DecisionLiteral up to whom we want to get the model
@@ -255,8 +252,7 @@ object CDCLGraphUtils {
     */
   private def getPartialModel(currentRoot: ADecisionLiteral, targetNode: ADecisionLiteral): Map[String, Boolean] = {
     def _getDecisionImplies(): Map[String, Boolean] = {
-      currentRoot.decisionImplies
-        .foldLeft[Map[String, Boolean]](Map())((acc, n) => acc + (n.varName -> n.varValue))
+      currentRoot.decisionImplies.map(nd => nd.varName -> nd.varValue).toMap
     }
 
     if (currentRoot.equals(targetNode)) {

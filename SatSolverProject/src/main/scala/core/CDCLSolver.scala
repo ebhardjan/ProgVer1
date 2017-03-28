@@ -171,7 +171,7 @@ class CDCLSolver extends SATSolvingAlgorithm {
               .filter(n => n.isInstanceOf[DecisionLiteral] || n.isInstanceOf[RootNode])
               .map(n => n.asInstanceOf[ADecisionLiteral])
               .head
-            CDCLGraphUtils.deleteAllDecisionLiteralsStartingWithChildOf(graph, newLastNodeParent)
+            Utils.time(CDCLGraphUtils.deleteAllDecisionLiteralsStartingWithChildOf(graph, newLastNodeParent))
           }
         }
         // add the newLastNode as a "tried child" to the newLastNodeParent only if we didn't learn anything new
