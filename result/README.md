@@ -57,7 +57,7 @@ appears most often in the formula. This is a rather simple heuristic, but
 worked better than for instance just picking the first one.
 
 DP can keep up to formulas with around 20 variables and 90 clauses before
-going over the 20 second limit. DPLL and CDCL go up to about 80 variables.
+going over the 20 second limit.
 
 For the next two graphs, we seperated the satisfiable from the unsatisfiable
 formulas, and only look at the average runtime over the ten formulas of same
@@ -81,10 +81,10 @@ Here are the results:
 
 ![](5sat_allresults_i20s_v2.png)
 
-We see a very similar picture as for 3sat, but now we cut out even sooner, at
-about 40 variables for DPLL and CDCL and only 15 for DP. This is not only because
-we increased the number of literals per clause, but also because we added more
-clauses such that we could generate both sat and unsat formulas.
+We see a very similar picture as for 3sat, but now for instance DP can only
+solve formulas with up to 15 variables within the given time limit. This is not
+only because we increased the number of literals per clause, but also because
+we added more clauses such that we could generate both sat and unsat formulas.
 
 The results when we separate the sat from the unsat problems and average over
 same sized formulas as before, look very much the same as for 3sat. We therefore
