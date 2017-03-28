@@ -136,6 +136,13 @@ class CDCLGraphUtilsTest extends FunSuite {
     val p5 = NonDecisionLiteral("p5", varValue = true, null)
     val p4 = NonDecisionLiteral("p4", varValue = true, null)
     val nP4 = NonDecisionLiteral("p4", varValue = false, null)
+    root.addNode(nP0)
+    root.addNode(nP2)
+    root.addNode(nP3)
+    root.addNode(nP1)
+    root.addNode(p5)
+    root.addNode(p4)
+    root.addNode(nP4)
     root.addChild(nP0)
 
     nP0.addChild(nP3)
