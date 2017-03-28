@@ -47,6 +47,7 @@ object SudokuSolver {
       case "z3" => solveWithZ3(formula)
       case "cdcl" => solveWithSolver(formula, CDCLSolverWrapper)
       case "dpll" => solveWithSolver(formula, new DPLLSolver)
+      case "dp" => solveWithSolver(formula, DPSolverWrapper)
     }
   }
 
