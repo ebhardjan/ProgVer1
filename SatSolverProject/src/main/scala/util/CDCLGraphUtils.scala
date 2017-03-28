@@ -1,5 +1,7 @@
 package util
 
+import scala.collection.mutable
+
 /**
   * Created by jan on 12.03.17.
   *
@@ -32,26 +34,15 @@ object CDCLGraphUtils {
     * @param conflictVarName variable of which we want to find the relevant decision literals
     * @return list of relevant decision literals
     */
-  // TODO optimize here
   def relevantDecisionLiterals(graph: RootNode, conflictVarName: String): Seq[DecisionLiteral] = {
-    def _relevantDecisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
-      graph match {
-        case d: DecisionLiteral =>
-          if (decisionLiteralReachesConflict(d, conflictVarName)) {
-            d.children.foldLeft(Seq(d))((s, c) => s ++: _relevantDecisionLiterals(c))
-          } else {
-            d.children.foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
-          }
-        case r: RootNode =>
-          r.children.foldLeft[Seq[DecisionLiteral]](Seq())((s, c) => s ++: _relevantDecisionLiterals(c))
-        case _ => Seq()
-      }
-    }
-
-    _relevantDecisionLiterals(graph)
+    val d = decisionLiterals(graph)
+    d.filter(d => decisionLiteralReachesConflict(d, conflictVarName))
   }
 
-  def decisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
+  /**
+    * Returns a sequence of decision literals in the order they appear in the graph
+    */
+  private def decisionLiterals(graph: GraphNode): Seq[DecisionLiteral] = {
     graph match {
       case DecisionLiteral(_, _, _) => graph.children
         .foldLeft(Seq(graph.asInstanceOf[DecisionLiteral]))((s, c) => s ++: decisionLiterals(c))
@@ -129,15 +120,16 @@ object CDCLGraphUtils {
     */
   def deleteAllDecisionLiteralsStartingWithChildOf(root: RootNode, parentOfDecisionLiteral: GraphNode): Unit = {
     val nextDecisionLiteral = findFirstDecisionLiteralChild(parentOfDecisionLiteral)
-    if (nextDecisionLiteral != null) {
-      deleteAllDecisionLiteralsStartingWithChildOf(root, nextDecisionLiteral)
+    val allDecisionLiterals = (Seq(parentOfDecisionLiteral.asInstanceOf[ADecisionLiteral]) ++
+      decisionLiterals(nextDecisionLiteral)).toArray
+    for (i <- 1 until allDecisionLiterals.length) {
       // delete all the non decision literals that got implied because of this decision literal
-      nextDecisionLiteral.decisionImplies.foreach(nd => {
+      allDecisionLiterals(i).decisionImplies.foreach(nd => {
         root.removeNode(nd)
         deleteNonDecisionLiteralFromGraph(root, nd.varName, nd.varValue)
       })
-      root.removeNode(nextDecisionLiteral)
-      parentOfDecisionLiteral.removeChild(nextDecisionLiteral)
+      root.removeNode(allDecisionLiterals(i))
+      allDecisionLiterals(i - 1).removeChild(allDecisionLiterals(i))
     }
   }
 
@@ -199,33 +191,24 @@ object CDCLGraphUtils {
     * @param learnedClause the new clause we want to just learned and want to add to all formulas
     */
   def addClauseToAllFormulas(root: RootNode, learnedClause: InternalClause): Unit = {
-    // TODO: loosing one second here!
-      root.formula = {
-        deactivateAlreadyChosenLiterals(learnedClause, getPartialModel(root, root)) match {
-          case Some(f) => InternalCNF(root.formula.conjuncts + f)
-          case None => root.formula
+    val dLiterals = root +: decisionLiterals(root)
+    var partialModel: mutable.Map[String, Boolean] = mutable.Map()
+    dLiterals.foreach(d => {
+      partialModel = extendPartialModel(d, partialModel)
+      d.formula = {
+        deactivateAlreadyChosenLiterals(learnedClause, partialModel) match {
+          case Some(f) => InternalCNF(d.formula.conjuncts + f)
+          case None => d.formula
         }
       }
-      root.allNodes foreach { case (_, v) =>
-        v match {
-          case graph: DecisionLiteral =>
-            val partialModel = getPartialModel(root, graph)
-            graph.formula = {
-              deactivateAlreadyChosenLiterals(learnedClause, partialModel) match {
-                case Some(f) => InternalCNF(graph.formula.conjuncts + f)
-                case None => graph.formula
-              }
-            }
-          case _ =>
-        }
-      }
+    })
   }
 
   /**
     * Deactivates the disjuncts in a clause whose negation is in a given model or partial model.
     * If the clause contains a literal that is contained in the model, None is returned.
     */
-  private def deactivateAlreadyChosenLiterals(clause: InternalClause, partialModel: Map[String, Boolean])
+  private def deactivateAlreadyChosenLiterals(clause: InternalClause, partialModel: mutable.Map[String, Boolean])
   : Option[InternalClause] = {
     if (clause.disjuncts.exists(d => partialModel.contains(d.literal.name)
       && partialModel(d.literal.name) == d.literal.polarity)) {
@@ -242,31 +225,13 @@ object CDCLGraphUtils {
     }
   }
 
-  /**
-    * traverses the tree starting from the top and collects the parts of the model that we already decided on or are
-    * already given before we made the decision specified by targetNode
-    *
-    * @param currentRoot root node of the graph
-    * @param targetNode  DecisionLiteral up to whom we want to get the model
-    * @return partial model
-    */
-  private def getPartialModel(currentRoot: ADecisionLiteral, targetNode: ADecisionLiteral): Map[String, Boolean] = {
-    def _getDecisionImplies(): Map[String, Boolean] = {
-      currentRoot.decisionImplies.map(nd => nd.varName -> nd.varValue).toMap
+  private def extendPartialModel(decisionLiteral: ADecisionLiteral, previousModel: mutable.Map[String, Boolean])
+  : mutable.Map[String, Boolean] = {
+    if (decisionLiteral.isInstanceOf[DecisionLiteral]) {
+      previousModel += (decisionLiteral.varName -> decisionLiteral.varValue)
     }
-
-    if (currentRoot.equals(targetNode)) {
-      currentRoot match {
-        case _: RootNode => _getDecisionImplies()
-        case _ => Map(currentRoot.varName -> currentRoot.varValue) ++ _getDecisionImplies()
-      }
-    } else {
-      val decisionImplies: Map[String, Boolean] = _getDecisionImplies()
-      currentRoot.children
-        .filter(n => n.isInstanceOf[DecisionLiteral])
-        .map(n => n.asInstanceOf[DecisionLiteral])
-        .foldLeft(decisionImplies)((acc, c) => acc + (c.varName -> c.varValue) ++ getPartialModel(c, targetNode))
-    }
+    decisionLiteral.decisionImplies.foreach(nd => previousModel += nd.varName -> nd.varValue)
+    previousModel
   }
 
 }
