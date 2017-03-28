@@ -4,7 +4,7 @@ import re
 
 inputFile = open('3sat/evaluations_sorted.txt')
 AGGREGATE_N = 10
-FILTER_STR = "_unsat"
+FILTER_STR = ""
 VARIABLES_USED = [3,5,8,10,15,20,25,30,40,50,60,70,80,90,100,120]
 # VARIABLES_USED = [3,5,8,10,15,20,25,30,40,50]
 
@@ -88,7 +88,7 @@ if AGGREGATE_N > 1:
                  " formulas of same size"
 ax.set_title(titleText)
 
-legend = ax.legend(loc='right')
+legend = ax.legend(loc='lower right')
 plt.ylabel("Runtime [ms]")
 plt.xlabel("Number of variables")
 
