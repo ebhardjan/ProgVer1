@@ -26,6 +26,7 @@ sbt "run path-to-file/filename.smt2 /cdcl"
 
 // run all an algorithm on a file with timeout and print the runtime
 sbt "run /eval path-to-file/file /[dp|dpll|cdcl]"
+```
 
 For the automatic evaluation it is not necessary to add the `/cnf` flag, it will
 work with both formats. Specifics about running the evaluation can be configured
@@ -36,7 +37,7 @@ For solving sudoku puzzles:
 ```
 // solve a sudoku puzzle
 sbt "run path-to-file/sudoku-puzzle.txt /sudoku"
-// solve sudoku puzzel with specific solver (the default sovler is dpll)
+// solve sudoku puzzel with specific solver (the default solver is dpll)
 sbt "run path-to-file/sudoku-puzzle.txt /cdcl /sudoku"
 ```
 
@@ -70,4 +71,3 @@ Analysis
 
 You can find the evaluations and our analysis of the results in the subfolder
 [./result](./result).
-
